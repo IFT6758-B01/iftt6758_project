@@ -9,12 +9,15 @@ import time
 class NHLDataFetcher:
     def __init__(self, base_url, save_dir=None):
         # Use environment variable for file path if provided
-        self.save_dir = save_dir or os.getenv('DATA_PATH', '../downloaded_data/')
+        self.save_dir = save_dir or os.getenv('DATA_PATH', '../dataset/unprocessed/')
         self.base_url = base_url
     
     def get_season_data(self, game_id):
         # Create file path
-        filename = f'{self.save_dir}game_{game_id}.json'
+        season = game_id[:4]
+        season_folder = os.path.join(self.save_dir, season)
+        filename = os.path.join(season_folder, f'game_{game_id}.json')
+        
         
         # Check if the data is already cached
         if os.path.exists(filename):
@@ -28,7 +31,7 @@ class NHLDataFetcher:
             response = requests.get(url)
             response.raise_for_status()
             
-            os.makedirs(self.save_dir, exist_ok=True)  # Ensure directory exists
+            os.makedirs(season_folder, exist_ok=True)  # Ensure directory exists
             with open(filename, 'w') as file:
                 file.write(response.text)
             
