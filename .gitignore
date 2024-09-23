@@ -136,4 +136,4 @@ dmypy.json
 .pyre/
 
 # dataset
-downloaded_data/
+dataset/
