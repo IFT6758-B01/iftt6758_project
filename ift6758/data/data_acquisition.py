@@ -11,7 +11,7 @@ class NHLDataFetcher:
         # Use environment variable for file path if provided
         self.save_dir = save_dir or os.getenv('DATA_PATH', '../dataset/unprocessed/')
         self.base_url = base_url
-    
+
     def get_game_data(self, game_id):
         """
         Downloads a single game for the given game_id.
@@ -20,14 +20,14 @@ class NHLDataFetcher:
         season = game_id[:4]
         season_folder = os.path.join(self.save_dir, season)
         filename = os.path.join(season_folder, f'game_{game_id}.json')
-        
-        
+
+
         # Check if the data is already cached
         if os.path.exists(filename):
             print(f"Loading cached data for game ID: {game_id}")
             with open(filename, 'r') as file:
                 return file.read(), False
-        
+
         # Otherwise download the data
         url = self.base_url.format(game_id)
         try:
@@ -38,14 +38,14 @@ class NHLDataFetcher:
             if 'error' in data:
                 print(f"Error found in response for game ID {game_id}: {data['error']}")
                 return None, True
-            
+
             os.makedirs(season_folder, exist_ok=True)  # Ensure directory exists
             with open(filename, 'w') as file:
                 file.write(response.text)
-            
+
             print(f"Successfully downloaded and cached data for game ID: {game_id}")
             return data, False
-        
+
         except requests.exceptions.HTTPError as http_err:
             print(f"HTTP error occurred for game ID {game_id}: {http_err}")
             return None, True
@@ -61,9 +61,9 @@ class NHLDataFetcher:
             num_games = 1353
         elif int(year) >= 2017:
             num_games = 1271
-        else: 
+        else:
             num_games = 1230
-        
+
         # Preseason games
         for game_number in range(1, num_games+1):
             game_id = f"{year}01{game_number:04d}"

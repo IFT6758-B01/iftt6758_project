@@ -9,10 +9,10 @@ import pandas as pd
 def parse_game_events(game_data):
     """
     Parses the JSON response of a game to extract 'shot-on-goal' and 'goal' events and converts them into a Pandas DataFrame.
-    
+
     Parameters:
         game_data (dict): JSON response of a single game's events.
-    
+
     Returns:
         pd.DataFrame: A dataframe containing the filtered and formatted events data.
     """
@@ -70,7 +70,7 @@ def parse_game_events(game_data):
 
     # Convert the list of events into a Pandas DataFrame
     df = pd.DataFrame(event_data)
-    
+
     return df
 
 # Open the JSON file, process it, and save the dataframe as a CSV
@@ -78,10 +78,10 @@ def process_and_save_json_file(json_filename, csv_save_dir):
     # Open the file
     with open(json_filename, 'r') as file:
         game_data = json.load(file)  # Load the data into a dictionary
-    
+
     # Process the data using the parse_game_events function
     df = parse_game_events(game_data)
-    
+
     # Get the game ID from the data for naming the file
     game_id = game_data.get('id', None)
 
@@ -93,7 +93,7 @@ def process_and_save_json_file(json_filename, csv_save_dir):
 
     # Save the dataframe to CSV
     df.to_csv(csv_filename, index=False)
-    
+
     print(f"Data for game {game_id} has been saved to {csv_filename}.")
 
 
@@ -103,6 +103,3 @@ season = "2022"
 season_folder = os.path.join(os.getenv('DATA_PATH', '../dataset/unprocessed/'), season)
 filename = os.path.join(season_folder, f'game_{game_id}.json')
 process_and_save_json_file(filename, os.path.join(os.getenv('DATA_PATH', '../dataset/processed/'), season))
-
-
-
