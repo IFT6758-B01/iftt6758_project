@@ -101,17 +101,19 @@ class NHLDataFetcher:
         print(f"Completed downloading data for the {year}-{int(year)+1} NHL season.")
 
 
-# Example usage
-base_url = "https://api-web.nhle.com/v1/gamecenter/{}/play-by-play"
-fetcher = NHLDataFetcher(base_url)
 
-game_ids = ['2022030411']
+if __name__ == '__main__':
+  # Example usage
+  base_url = "https://api-web.nhle.com/v1/gamecenter/{}/play-by-play"
+  fetcher = NHLDataFetcher(base_url)
 
-# Fetch data for each game
-for game_id in game_ids:
-    data = fetcher.get_game_data(game_id)
-    time.sleep(1)  # Delay to avoid hitting the API too hard
+  game_ids = ['2022030411']
 
-year = "2022"
-# Fetch data for a full season
-fetcher.get_season_data(year)
+  # Fetch data for each game
+  for game_id in game_ids:
+      data = fetcher.get_game_data(game_id)
+      time.sleep(1)  # Delay to avoid hitting the API too hard
+
+  year = "2022"
+  # Fetch data for a full season
+  fetcher.get_season_data(year)
