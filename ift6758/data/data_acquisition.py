@@ -5,12 +5,21 @@
 import os
 import requests
 import time
+from sys import argv
 
 class NHLDataFetcher:
     def __init__(self, base_url, save_dir=None):
         # Use environment variable for file path if provided
-        self.save_dir = save_dir or os.getenv('DATA_PATH', '../dataset/unprocessed/')
+        self.get_root_path = self._get_root_path()
+        self.save_dir = save_dir or os.getenv('DATA_PATH', f'{self.get_root_path}/dataset/unprocessed/')
         self.base_url = base_url
+
+    def _get_exec_path(self):
+        return os.path.abspath(argv[0]).split('/')[:-1]
+
+    def _get_root_path(self):
+        self.exec_path = self._get_exec_path()
+        return '/'.join(self.exec_path[:-1])
 
     def get_game_data(self, game_id):
         """
