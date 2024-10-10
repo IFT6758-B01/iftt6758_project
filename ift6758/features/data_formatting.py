@@ -30,7 +30,7 @@ def parse_game_events(game_data):
             # Extract time, period, and event fields
             time_in_period = event.get('timeInPeriod', None)
             time_remaining = event.get('timeRemaining', None)
-            period = event.get('periodDescriptor', None)
+            period = event.get('periodDescriptor', None).get('number', None)
             event_id = event.get('eventId', None)
 
             # Team that took the shot
@@ -47,6 +47,10 @@ def parse_game_events(game_data):
 
             # Shot type
             shot_type = event.get('details', {}).get('shotType', None)
+
+            # Zone Code for figuring out which side the team is on
+            zone_code = event.get('details', {}).get('zoneCode', None)
+
 
             # Check if it was on an empty net (no goalie present)
             empty_net = goalie_id is None
@@ -65,7 +69,8 @@ def parse_game_events(game_data):
                 'shooter_id': shooter_id or scoring_player_id,  # Use scoring player ID if it's a goal
                 'goalie_id': goalie_id,
                 'shot_type': shot_type,
-                'empty_net': empty_net
+                'empty_net': empty_net,
+                'zone_code': zone_code
             })
 
     # Convert the list of events into a Pandas DataFrame
@@ -98,11 +103,12 @@ def process_and_save_json_file(json_filename, csv_save_dir):
 
 
 # Example Usage
-game_id = "2022030411"
+game_ids = ["2022010001", "2022010002", "2022010003"]
 season = "2022"
 season_folder = os.path.join(os.getenv('DATA_PATH', '../dataset/unprocessed/'), season)
-filename = os.path.join(season_folder, f'game_{game_id}.json')
-process_and_save_json_file(filename, os.path.join(os.getenv('DATA_PATH', '../dataset/processed/'), season))
+for game_id in game_ids:
+    filename = os.path.join(season_folder, f'game_{game_id}.json')
+    process_and_save_json_file(filename, os.path.join(os.getenv('DATA_PATH', '../dataset/processed/'), season))
 
 
 
