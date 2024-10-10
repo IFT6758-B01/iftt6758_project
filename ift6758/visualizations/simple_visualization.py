@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# TODO process all the data required in the questions and regenerate the plots
 
 # QUESTION 1
 
@@ -173,7 +174,8 @@ def process_game(file_path):
                     'distance': distance,
                     'is_goal': is_goal,
                     'period_number': period,
-                    'zone_code': row['zone_code']
+                    'zone_code': row['zone_code'],
+                    'shot_type': row['shot_type'],
                 })
     
     # Convert processed data into a DataFrame
@@ -257,10 +259,82 @@ all_data = get_all_data(data_folder)
 shot_goal_tally = tally_shots_and_goals(all_data)
 
 print(shot_goal_tally)
-plot_shot_types_vs_goals(shot_goal_tally)
+# plot_shot_types_vs_goals(shot_goal_tally)
 
 # Question 2
 distance_data = process_all_games(data_folder)
 
 print(distance_data)
-plot_shot_outcomes_by_distance(distance_data)
+# plot_shot_outcomes_by_distance(distance_data)
+
+
+
+def prepare_goal_percentage_data(shots_data):
+    """
+    Prepares the data for the goal percentage plot, grouping by shot type and distance.
+
+    Parameters:
+        shots_data (pd.DataFrame): The shot data for a given season.
+
+    Returns:
+        pd.DataFrame: Pivot table with shot types as rows, distance bins as columns, and goal percentage as values.
+    """
+    # Bin distances into 5-unit intervals
+    shots_data['distance_bin'] = pd.cut(shots_data['distance'], bins=range(0, int(shots_data['distance'].max()) + 5, 5))
+
+    # Group by shot type and distance bin
+    grouped_data = shots_data.groupby(['shot_type', 'distance_bin']).agg(
+        total_shots=('event_id', 'count'),
+        total_goals=('is_goal', 'sum')  # Sum up the goals
+    ).reset_index()
+
+    # Calculate goal percentage
+    grouped_data['goal_percentage'] = grouped_data['total_goals'] / grouped_data['total_shots']
+
+    # Pivot the table for plotting
+    pivot_table = grouped_data.pivot(index='shot_type', columns='distance_bin', values='goal_percentage')
+
+    return pivot_table
+
+
+# QUESTION 3
+
+
+def plot_goal_percentage_heatmap(pivot_table):
+    """
+    Plots a heatmap of goal percentage as a function of shot type and distance using a logarithmic color scale.
+
+    Parameters:
+        pivot_table (pd.DataFrame): Pivot table with goal percentages.
+    """
+    # Apply logarithmic transformation to the values in the pivot table, adding a small value to avoid log(0)
+    pivot_table_log = np.log10(pivot_table + 1e-3)  # Adding a small constant to avoid log(0)
+
+    # Create the heatmap with logarithmic scale
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(
+        pivot_table_log, 
+        annot=pivot_table,  # Show the original values in the heatmap
+        cmap="coolwarm", 
+        fmt=".2f",  # Format the annotations to show two significant digits in decimal
+        linewidths=.5,
+        cbar_kws={'label': 'Log Goal Percentage'}
+    )
+
+    # Add labels and title
+    plt.title('Goal Percentage by Shot Type and Distance (Logarithmic Scale)', fontsize=16)
+    plt.xlabel('Distance from Net (Binned)', fontsize=12)
+    plt.ylabel('Shot Type', fontsize=12)
+
+    # Rotate x-axis labels for better readability
+    plt.xticks(rotation=45)
+
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
+
+# Prepare the data
+pivot_table = prepare_goal_percentage_data(distance_data)
+
+# Plot the heatmap
+plot_goal_percentage_heatmap(pivot_table)
