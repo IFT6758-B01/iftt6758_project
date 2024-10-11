@@ -167,7 +167,7 @@ def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH 
             with open(game_json_file, 'r') as open_file:
                 print(f'Processing {game_json_file}..')
                 game_dict = json.load(open_file)
-                df_game = data_formatting.parse_game_events(game_dict)
+                df_game = parse_game_events(game_dict)
                 df_game.to_csv(output_file)
                 print(f'Saved csv of dataframe to {output_file}')
 
