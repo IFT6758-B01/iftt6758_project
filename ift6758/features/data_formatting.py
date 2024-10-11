@@ -123,8 +123,9 @@ def gather_and_check_paths(DATA_INPUT_PATH: str = None, DATA_OUTPUT_PATH: str = 
     """
 
     #Get absolute path of currently run script
-    ##From https://stackoverflow.com/a/595317
-    EXEC_PY_PATH = pathlib.Path(sys.argv[0]).absolute()
+    ##From https://stackoverflow.com/a/595317: sys.argv[0] => will not work if import file as module
+    ##Experimenting with __file__ which seems to be more consistant
+    EXEC_PY_PATH = pathlib.Path(__file__).absolute()
     #Setting dir 'ift6758' as ROOT_DIR
     ROOT_DIR = EXEC_PY_PATH.parents[1]
     #Check if DATA_INPUT_PATH and DATA_OUTPUT_PATH have been set and get their absolute paths
