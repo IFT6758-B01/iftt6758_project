@@ -107,9 +107,9 @@ def determine_goal(team_shots):
         zone_code = row['zone_code']
         
         if zone_code == 'O':  # Offensive zone
-            return (100, 0) if x_coord > 0 else (-100, 0)
+            return (90, 0) if x_coord > 0 else (-90, 0)
         elif zone_code == 'D':  # Defensive zone
-            return (-100, 0) if x_coord > 0 else (100, 0)
+            return (-90, 0) if x_coord > 0 else (90, 0)
     
     # If no valid offensive or defensive zone shot is found, return None (e.g., all shots in neutral zone)
     return None
