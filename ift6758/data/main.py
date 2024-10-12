@@ -58,6 +58,12 @@ def init_parser():
     help=dedent(f"""Directory in which output should go to.\nDefaults to `../dataset/unprocessed`""")
   )
 
+  parser.add_argument(
+    '--parse-args',
+    default=None,
+    action='store_true'
+  )
+
   return parser
 
 #Function that look for REGEX patterns in arguments fed to parser
@@ -146,6 +152,10 @@ def main():
   args = parser.parse_args(sys_args)
   #Check if valid arguments
   q_year, q_type, q_games, q_dir = verify_args_parser(parser, args)
+  #If called with arg `--parse-args`, then return after successfully checking passed args
+  if args.parse_args:
+    print('Got to main')
+    return
   #Instanciate fetcher
   base_url = "https://api-web.nhle.com/v1/gamecenter/{}/play-by-play"
   fetcher = NHLDataFetcher(base_url, save_dir = q_dir or None)
