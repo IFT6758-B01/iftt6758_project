@@ -144,7 +144,7 @@ def _check_for_cli_args():
         subprocess_popen_cmanager(['python', 'data/main.py', '--help'], timeout=10)
         print('Exiting..')
         os.sys.exit()
-    p = subprocess_popen_cmanager(['python','data/main.py', '--parse-args', *passed_args], timeout=30, verbose=True)
+    p = subprocess_popen_cmanager(['python','data/main.py', '--parse-args', *passed_args], timeout=30)
     args = p.args
     if '--parse-args' in p.args:
         args.remove('--parse-args')

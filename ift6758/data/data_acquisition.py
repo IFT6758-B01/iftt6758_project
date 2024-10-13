@@ -11,7 +11,7 @@ class NHLDataFetcher:
     def __init__(self, base_url, save_dir=None):
         # Use environment variable for file path if provided
         self.get_root_path = self._get_root_path()
-        self.save_dir = save_dir or os.getenv('NHL_DATA_OUTPUT_PATH', f'{self.get_root_path}/dataset/unprocessed/')
+        self.save_dir = os.getenv('NHL_DATA_OUTPUT_PATH') or save_dir or f'{self.get_root_path}/dataset/unprocessed/'
         self.base_url = base_url
 
     def _get_exec_path(self):
@@ -112,6 +112,7 @@ class NHLDataFetcher:
 
 
 if __name__ == '__main__':
+  raise RuntimeError('This file is not meant to be executed as main script')
   # Example usage
   base_url = "https://api-web.nhle.com/v1/gamecenter/{}/play-by-play"
   fetcher = NHLDataFetcher(base_url)

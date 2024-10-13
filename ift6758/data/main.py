@@ -61,7 +61,8 @@ def init_parser():
   parser.add_argument(
     '--parse-args',
     default=None,
-    action='store_true'
+    action='store_true',
+    help='Check validity of passed arguments without executing the data acquisition'
   )
 
   return parser
@@ -136,13 +137,13 @@ def verify_args_parser(parser, args : argparse.Namespace = None):
     #Argument `output`
     if args.output != parser.get_default('output'):
       assert pathlib.Path.is_dir(args.output), f'{args.output} is not a directory'
+      assert os.getenv('NHL_DATA_OUTPUT_PATH') is None, 'Cannot use -o|--output with set environment variable NHL_DATA_OUTPUT_PATH'
     q_dir = args.output
     return q_year, q_type, q_games, q_dir
 
-  except AssertionError as err:
+  except (AssertionError, ValueError) as err:
     print(err)
-  except ValueError as err:
-    print(err)
+    os.sys.exit()
 
 def main():
   #Instanciate parser
