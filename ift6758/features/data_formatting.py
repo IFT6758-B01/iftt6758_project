@@ -1,14 +1,11 @@
 # TODO
 # Still need to include calculations for when the goal is at even strength, shorthanded, or power play
-# Automate converting an entire season to CSV files
 
 import os
 import json
 import pathlib
-import sys
 import re
 import pandas as pd
-from typing import Tuple
 
 def parse_game_events(game_data: dict) -> pd.DataFrame:
     """
@@ -82,6 +79,8 @@ def parse_game_events(game_data: dict) -> pd.DataFrame:
 
     return df
 
+
+'''
 # Backup of original process_and_save_json_file --> added `_` in front
 # Open the JSON file, process it, and save the dataframe as a CSV
 def _process_and_save_json_file(json_filename, csv_save_dir):
@@ -144,6 +143,30 @@ def gather_and_check_paths(DATA_INPUT_PATH: str = None, DATA_OUTPUT_PATH: str = 
             os.makedirs(DATA_OUTPUT_PATH)
     return DATA_INPUT_PATH, DATA_OUTPUT_PATH
 
+def _assert_game_json(pathlib_gen):
+    faulty_files = []
+    while True:
+        try:
+            file_item = next(pathlib_gen)
+            with file_item.open(mode='r') as file:
+                json_file = json.load(file)
+                assert type(json_file) is dict
+                assert json_file.get("id")
+                assert json_file.get("plays")
+            return True
+        except StopIteration:
+            if len(faulty_files) > 0:
+                print(f'Found {len(faulty_files)} faulty files in path')
+                print(f'Such as {random.choice(faulty_files)}')
+                print('Make sure that DATA_INPUT_PATH contains only NHL game data')
+                return False, faulty_files
+            else:
+                return True
+        except AssertionError:
+            faulty_files.append(file_item)
+'''
+
+
 def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH : pathlib.Path) -> None:
     """
     Process all .json files found in DATA_INPUT_PATH, convert to Pandas DataFrame and save them to csv in DATA_OUTPUT_PATH
@@ -157,8 +180,7 @@ def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH 
     Returns:
         None
     """
-
-    for game_json_file in DATA_INPUT_PATH.rglob("*.json"):
+    for game_json_file in DATA_INPUT_PATH.rglob("**/game*.json"):
         game_title = game_json_file.parts[-1]
         game_title_csv = re.sub('json$', 'csv', game_title)
         season_folder = game_json_file.parts[-2]
@@ -184,14 +206,7 @@ def main():
   process_and_save_json_file(DATA_INPUT_PATH, DATA_OUTPUT_PATH)
 
 if __name__ == '__main__' :
-    main()
-
-
-'''
-    # Example Usage
-    game_id = "2022030411"
-    season = "2022"
-    season_folder = os.path.join(os.getenv('DATA_PATH', '../dataset/unprocessed/'), season)
-    filename = os.path.join(season_folder, f'game_{game_id}.json')
-    process_and_save_json_file(filename, os.path.join(os.getenv('DATA_PATH', '../dataset/processed/'), season))
-'''
+		#This file is now part of pipeline ../fetch_and_tidy.py
+		#Utils functions such as gather_and_check_paths have been moved to ../fetch_and_tidy.py
+		#Executing as a main script will fail
+		raise RuntimeError('This file is not meant to be executed as a standalone script')

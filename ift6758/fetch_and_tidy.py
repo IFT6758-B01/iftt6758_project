@@ -2,10 +2,13 @@
 
 import subprocess
 import os
+import pathlib
+import json
+import random
 import features.data_formatting
 from re import match
 from time import sleep
-
+from typing import Tuple
 
 def subprocess_popen_cmanager(args: list, timeout=30, verbose=False):
     """
@@ -36,6 +39,82 @@ def subprocess_popen_cmanager(args: list, timeout=30, verbose=False):
         p.kill()
     finally:
         return p
+
+
+def _gather_and_check_paths(DATA_INPUT_PATH: str = None, DATA_OUTPUT_PATH: str = None) -> Tuple[pathlib.Path, pathlib.Path]:
+    """
+    Gather DATA_INPUT_PATH and DATA_OUTPUT_PATH in the following order:
+      Argument fed in the function, else
+      System Environment Varaible as 'NHL_DATA_[INPUT|OUTPUT]_PATH', else
+      Default directory '{ROOT_DIR}/dataset/[unprocessed|processed]' with ROOT_DIR as root directory of currently executed script
+
+      Parameters:
+          DATA_INPUT_PATH·(str) : Input directory of unprocessed data
+          DATA_OUTPUT_PATH·(str) : Output directory of processed (DataFrames) data
+      Returns:
+          DATA_INPUT_PATH (pathlib.Path)
+          DATA_OUTPUT_PATH (pathlib.Path)
+    """
+
+    #Get absolute path of currently run script
+    ##From https://stackoverflow.com/a/595317: sys.argv[0] => will not work if import file as module
+    ##Experimenting with __file__ which seems to be more consistant
+    EXEC_PY_PATH = pathlib.Path(__file__).absolute()
+    #Setting dir 'ift6758' as ROOT_DIR
+    ROOT_DIR = EXEC_PY_PATH.parents[0]
+    #Check if DATA_INPUT_PATH and DATA_OUTPUT_PATH have been set and get their absolute paths
+    DATA_INPUT_PATH = DATA_INPUT_PATH or os.getenv('NHL_DATA_INPUT_PATH', f'{ROOT_DIR}/dataset/unprocessed/')
+    DATA_INPUT_PATH = pathlib.Path(DATA_INPUT_PATH).absolute()
+    DATA_OUTPUT_PATH = DATA_OUTPUT_PATH or os.getenv('NHL_DATA_OUTPUT_PATH', f'{ROOT_DIR}/dataset/processed/')
+    DATA_OUTPUT_PATH = pathlib.Path(DATA_OUTPUT_PATH).absolute()
+    #Check that those paths exist
+    ##DATA_INPUT_PATH must exists, else raise FileNotFoundError
+    ##DATA_OUTPUT_PATH could not exist, create it
+    if not DATA_INPUT_PATH.exists():
+        raise FileNotFoundError(f'{DATA_INPUT_PATH} does not exists, cannot process data')
+        if not DATA_OUTPUT_PATH.exists():
+            print(f'Could not find output directory {DATA_OUTPUT_PATH}')
+            print('Creating it..')
+            os.makedirs(DATA_OUTPUT_PATH)
+    return DATA_INPUT_PATH, DATA_OUTPUT_PATH
+
+
+def _assert_game_json(pathlib_gen):
+    """
+    Asserts that `pathlib_gen` files respect NHL games JSON structures
+    Ensure validity of future processing of data
+
+    Parameters:
+        pathlib_gen (pathlib generator object) : Generator issued from pathlib.Path.glob or pathlib.Path.rglob
+    Returns:
+        True if all files in pathlib_gen respect assertions (type dict, `id`&`plays` keys)
+        None and early exit if any file does not respect assertions
+    """
+    faulty_files = []
+    while True:
+        try:
+            file_item = next(pathlib_gen)
+            with file_item.open(mode='r') as file:
+                json_file = json.load(file)
+                assert type(json_file) is dict
+                assert json_file.get("id")
+                assert json_file.get("plays")
+            return True
+        except StopIteration:
+            if len(faulty_files) > 0:
+                print(f'Found {len(faulty_files)} faulty files in path')
+                print(f'Such as {random.choice(faulty_files)}')
+                inpt = input('See full list ? [y/N]')
+                if inpt == 'y' or inpt == 'Y':
+                    print(list(map(str,faulty_files)))
+                print('Make sure that DATA_INPUT_PATH contains only NHL game data')
+                os.sys.exit()
+                #return False, faulty_files
+            else:
+                return True
+        except AssertionError:
+            faulty_files.append(file_item)
+
 
 
 def _check_for_env_vars():
@@ -73,12 +152,13 @@ def _check_for_cli_args():
 
 
 def main():
-    _check_for_env_vars()
-    passed_args = _check_for_cli_args()
-    print("Attempting to download games")
-    subprocess_popen_cmanager(passed_args or ['python', 'data/main.py', '-y', '2016-2023', '-t', '2,3'], timeout=1800)
-    print("Filtering json, formatting to pandas DataFrame and saving to csv")
-    features.data_formatting.process_and_save_json_file(*features.data_formatting.gather_and_check_paths())
+    DATA_INPUT_PATH, DATA_OUTPUT_PATH = _gather_and_check_paths()
+    if _assert_game_json(DATA_INPUT_PATH.rglob("**/*game*.json")):
+        passed_args = _check_for_cli_args()
+        print("Attempting to download games")
+        subprocess_popen_cmanager(passed_args or ['python', 'data/main.py', '-y', '2016-2023', '-t', '2,3'], timeout=1800)
+        print("Filtering json, formatting to pandas DataFrame and saving to csv")
+        features.data_formatting.process_and_save_json_file(DATA_INPUT_PATH, DATA_OUTPUT_PATH)
 
 if __name__ == '__main__':
     main()
