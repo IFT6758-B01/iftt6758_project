@@ -152,12 +152,20 @@ def _check_for_cli_args():
 
 
 def main():
+    #Gather input (unprocessed data) and output (processed csv of Pandas DataFrame) paths
     DATA_INPUT_PATH, DATA_OUTPUT_PATH = _gather_and_check_paths()
+    #Assert that files in DATA_INPUT_PATH that have the pattern 'game*.json' are:
+    # - of valid format
+    # - contain necessary keys (see _assert_game_json() docstring)
     if _assert_game_json(DATA_INPUT_PATH.rglob("**/*game*.json")):
+        #Assert validity of CLI arguments `--year`, `--type`, `--games` and `--output`
         passed_args = _check_for_cli_args()
         print("Attempting to download games")
+        #Call CLI data acquisition NHLDataFetcher with passed_args if exists
+        #Else download every regular season and playoffs games from season 2016-17 to 2023-24
         subprocess_popen_cmanager(passed_args or ['python', 'data/main.py', '-y', '2016-2023', '-t', '2,3'], timeout=1800)
         print("Filtering json, formatting to pandas DataFrame and saving to csv")
+        #Call data formatting tidy pipeline on JSON in DATA_INPUT_PATH and save them to csv of pandas DataFrames
         features.data_formatting.process_and_save_json_file(DATA_INPUT_PATH, DATA_OUTPUT_PATH)
 
 if __name__ == '__main__':
