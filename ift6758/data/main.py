@@ -154,7 +154,6 @@ def main():
   q_year, q_type, q_games, q_dir = verify_args_parser(parser, args)
   #If called with arg `--parse-args`, then return after successfully checking passed args
   if args.parse_args:
-    print('Got to main')
     return
   #Instanciate fetcher
   base_url = "https://api-web.nhle.com/v1/gamecenter/{}/play-by-play"
