@@ -68,11 +68,12 @@ def _gather_and_check_paths(DATA_INPUT_PATH: str = None, DATA_OUTPUT_PATH: str =
     DATA_OUTPUT_PATH = DATA_OUTPUT_PATH or os.getenv('NHL_DATA_OUTPUT_PATH', f'{ROOT_DIR}/dataset/processed/')
     DATA_OUTPUT_PATH = pathlib.Path(DATA_OUTPUT_PATH).absolute()
     #Check that those paths exist
-    ##DATA_INPUT_PATH must exists, else raise FileNotFoundError
-    ##DATA_OUTPUT_PATH could not exist, create it
+    ##DATA_INPUT_PATH & DATA_OUTPUT_PATH could not exist, create then
     if not DATA_INPUT_PATH.exists():
-        raise FileNotFoundError(f'{DATA_INPUT_PATH} does not exists, cannot process data')
-        if not DATA_OUTPUT_PATH.exists():
+            print(f'Could not find input directory {DATA_INPUT_PATH}')
+            print('Creating it..')
+            os.makedirs(DATA_INPUT_PATH)
+    if not DATA_OUTPUT_PATH.exists():
             print(f'Could not find output directory {DATA_OUTPUT_PATH}')
             print('Creating it..')
             os.makedirs(DATA_OUTPUT_PATH)
