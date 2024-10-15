@@ -41,7 +41,7 @@ def subprocess_popen_cmanager(args: list, timeout=30, verbose=False):
         return p
 
 
-def _gather_and_check_paths(DATA_INPUT_PATH: str = None, DATA_OUTPUT_PATH: str = None) -> Tuple[pathlib.Path, pathlib.Path]:
+def _gather_and_check_paths(DATA_INPUT_PATH: str = None, DATA_OUTPUT_PATH: str = None, return_root_dir=False) -> Tuple[pathlib.Path, pathlib.Path, pathlib.Path]:
     """
     Gather DATA_INPUT_PATH and DATA_OUTPUT_PATH in the following order:
       Argument fed in the function, else
@@ -51,9 +51,11 @@ def _gather_and_check_paths(DATA_INPUT_PATH: str = None, DATA_OUTPUT_PATH: str =
       Parameters:
           DATA_INPUT_PATH·(str) : Input directory of unprocessed data
           DATA_OUTPUT_PATH·(str) : Output directory of processed (DataFrames) data
+          return_root_dir (bool) : Whether to return ROOT_DIR or not
       Returns:
           DATA_INPUT_PATH (pathlib.Path)
           DATA_OUTPUT_PATH (pathlib.Path)
+          ROOT_DIR (pathlib.Path)
     """
 
     #Get absolute path of currently run script
@@ -77,8 +79,10 @@ def _gather_and_check_paths(DATA_INPUT_PATH: str = None, DATA_OUTPUT_PATH: str =
             print(f'Could not find output directory {DATA_OUTPUT_PATH}')
             print('Creating it..')
             os.makedirs(DATA_OUTPUT_PATH)
-    return DATA_INPUT_PATH, DATA_OUTPUT_PATH
-
+    if return_root_dir:
+        return DATA_INPUT_PATH, DATA_OUTPUT_PATH, ROOT_DIR
+    else:
+        return DATA_INPUT_PATH, DATA_OUTPUT_PATH
 
 def _assert_game_json(pathlib_gen):
     """
@@ -145,7 +149,7 @@ def _check_for_cli_args():
         subprocess_popen_cmanager(['python', 'data/main.py', '--help'], timeout=10)
         print('Exiting..')
         os.sys.exit()
-    p = subprocess_popen_cmanager(['python','data/main.py', '--parse-args', *passed_args], timeout=30)
+    p = subprocess_popen_cmanager(['python', 'data/main.py', '--parse-args', *passed_args], timeout=30)
     args = p.args
     if '--parse-args' in p.args:
         args.remove('--parse-args')
@@ -154,7 +158,10 @@ def _check_for_cli_args():
 
 def main():
     #Gather input (unprocessed data) and output (processed csv of Pandas DataFrame) paths
-    DATA_INPUT_PATH, DATA_OUTPUT_PATH = _gather_and_check_paths()
+    DATA_INPUT_PATH, DATA_OUTPUT_PATH, ROOT_DIR = _gather_and_check_paths(return_root_dir=True)
+    #Move to ROOT_DIR for correct execution of subsequent scripts
+    _CURRENT_DIR = os.getcwd()
+    os.chdir(ROOT_DIR)
     #Assert that files in DATA_INPUT_PATH that have the pattern 'game*.json' are:
     # - of valid format
     # - contain necessary keys (see _assert_game_json() docstring)
@@ -168,6 +175,8 @@ def main():
         print("Filtering json, formatting to pandas DataFrame and saving to csv")
         #Call data formatting tidy pipeline on JSON in DATA_INPUT_PATH and save them to csv of pandas DataFrames
         features.data_formatting.process_and_save_json_file(DATA_INPUT_PATH, DATA_OUTPUT_PATH)
+        #Move back to previous dir
+        os.chdir(_CURRENT_DIR)
 
 if __name__ == '__main__':
     main()
