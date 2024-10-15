@@ -63,12 +63,12 @@ class NHLDataFetcher:
     def get_game_data_by_id(self, game_id):
         season = game_id[5:9]
         file_path = self.save_dir+'/'+season+'/'+game_id+'.json'
-        print(file_path)
+        #print(file_path)
         try:
             if os.path.exists(file_path):
                 with open(file_path, 'r') as f:
                     game_data = json.load(f)
-                    print('game_data_id',game_data)
+                    #print('game_data_id',game_data)
             else:
                 response = requests.get(self.BASE_URL.format(game_id))
                 if response.status_code == 200:
