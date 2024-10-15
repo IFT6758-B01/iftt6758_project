@@ -164,10 +164,13 @@ def main():
     for season in q_year:
       for type in q_type:
         for game in q_games:
-          fetcher.get_game_data(f'{season}{type}{game}')
+          if type == '03':
+            fetcher.get_playoffs_game_data(f'{season}{type}{game}')
+          else:
+            fetcher.get_game_data(f'{season}{type}{game}')
   else:                           #Fetch season-by-season if more than 1230 games required
     for season in q_year:
-      fetcher.get_season_data(season)
+      fetcher.get_season_data(season, q_type)
 
 
 if __name__ == '__main__':
