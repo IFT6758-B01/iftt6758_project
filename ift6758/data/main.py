@@ -58,6 +58,13 @@ def init_parser():
     help=dedent(f"""Directory in which output should go to.\nDefaults to `../dataset/unprocessed`""")
   )
 
+  parser.add_argument(
+    '--parse-args',
+    default=None,
+    action='store_true',
+    help='Check validity of passed arguments without executing the data acquisition'
+  )
+
   return parser
 
 #Function that look for REGEX patterns in arguments fed to parser
@@ -130,13 +137,13 @@ def verify_args_parser(parser, args : argparse.Namespace = None):
     #Argument `output`
     if args.output != parser.get_default('output'):
       assert pathlib.Path.is_dir(args.output), f'{args.output} is not a directory'
+      assert os.getenv('NHL_DATA_OUTPUT_PATH') is None, 'Cannot use -o|--output with set environment variable NHL_DATA_OUTPUT_PATH'
     q_dir = args.output
     return q_year, q_type, q_games, q_dir
 
-  except AssertionError as err:
+  except (AssertionError, ValueError) as err:
     print(err)
-  except ValueError as err:
-    print(err)
+    os.sys.exit()
 
 def main():
   #Instanciate parser
@@ -146,6 +153,9 @@ def main():
   args = parser.parse_args(sys_args)
   #Check if valid arguments
   q_year, q_type, q_games, q_dir = verify_args_parser(parser, args)
+  #If called with arg `--parse-args`, then return after successfully checking passed args
+  if args.parse_args:
+    return
   #Instanciate fetcher
   base_url = "https://api-web.nhle.com/v1/gamecenter/{}/play-by-play"
   fetcher = NHLDataFetcher(base_url, save_dir = q_dir or None)
@@ -154,10 +164,13 @@ def main():
     for season in q_year:
       for type in q_type:
         for game in q_games:
-          fetcher.get_game_data(f'{season}{type}{game}')
+          if type == '03':
+            fetcher.get_playoffs_game_data(f'{season}{type}{game}')
+          else:
+            fetcher.get_game_data(f'{season}{type}{game}')
   else:                           #Fetch season-by-season if more than 1230 games required
     for season in q_year:
-      fetcher.get_season_data(season)
+      fetcher.get_season_data(season, q_type)
 
 
 if __name__ == '__main__':
