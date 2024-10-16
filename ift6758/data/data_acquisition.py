@@ -94,7 +94,10 @@ class NHLDataFetcher:
         if os.path.exists(filename):
             print(f"Loading cached data for game ID: {game_id}")
             with open(filename, 'r') as file:
-                return file.read(), False
+                #Return JSON object (dict) to feed to ipywidget debugger
+                #Can also return str with file.read() in other cases
+                json_obj = json.load(file)
+                return json_obj, False
 
         # Otherwise download the data
         url = self.base_url.format(game_id)
