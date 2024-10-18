@@ -146,7 +146,7 @@ def aggregate_data(segmented_data, team=None):
 
 def calculate_kde(segmented_data, grid_size=100, bw_adjust=0.5, team_id=None):
     """
-    Calculates the average KDE, normalized by the number of games.
+    Calculates the average KDE.
 
     Parameters:
         segmented_data (dict): Nested dictionary where data is segmented by team, game, and period.
@@ -163,12 +163,6 @@ def calculate_kde(segmented_data, grid_size=100, bw_adjust=0.5, team_id=None):
     # Extract shot coordinates
     x = data['x_coord']
     y = data['y_coord']
-    
-    # Count the number of unique games
-    num_games = data['game_id'].nunique()
-    if team_id is None:
-        # Times 2, as each game has two teams
-        num_games = num_games * 2
     
     # Set up the grid
     x_grid = np.linspace(-100, 100, grid_size)
@@ -190,50 +184,7 @@ def calculate_kde(segmented_data, grid_size=100, bw_adjust=0.5, team_id=None):
     kde = gaussian_kde(valid_coords, bw_method=bw_adjust)
     kde_values = np.reshape(kde(positions).T, x_mesh.shape)
     
-    # Normalize by the number of games
-    kde_values /= num_games
-    
     return x_grid, y_grid, kde_values
-
-
-def plot_kde_difference(segmented_data, team_id, grid_size=100, bw_adjust=0.5):
-    """
-    Plots the difference between a team's KDE and the league-wide KDE using Plotly.
-
-    Parameters:
-        segmented_data (dict): Nested dictionary where data is segmented by team, game, and period.
-        team_id (int): The ID of the team to calculate the KDE for.
-        grid_size (int): Resolution of the grid for KDE.
-        bw_adjust (float): Bandwidth adjustment for the KDE.
-    """
-    # Calculate the league KDE
-    x_grid, y_grid, league_kde = calculate_kde(segmented_data, grid_size, bw_adjust)
-    
-    # Calculate the team's KDE
-    _, _, team_kde = calculate_kde(segmented_data, grid_size, bw_adjust, team_id)
-
-    # Calculate the difference between the team's KDE and the league KDE
-    kde_diff = team_kde - league_kde
-    
-    # Plot the difference using Plotly's imshow
-    fig = px.imshow(
-        kde_diff,
-        x=x_grid,
-        y=y_grid,
-        labels={'x': 'X Coordinate (Feet)', 'y': 'Y Coordinate (Feet)'},
-        title=f'Difference in Shot Density from League Average for Team {team_id}',
-        color_continuous_scale='RdBu',  # Red for above average, blue for below average
-        zmin=-np.max(np.abs(kde_diff)),  # Set limits to symmetric around zero
-        zmax=np.max(np.abs(kde_diff)),
-        aspect='auto',
-        origin='lower'
-    )
-
-    # Adjust axis properties for better readability
-    fig.update_xaxes(showgrid=False, zeroline=False)
-    fig.update_yaxes(showgrid=False, zeroline=False)
-
-    fig.show()
 
 
 def calculate_percentage_kde_difference(team_kde, league_kde):
