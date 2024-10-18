@@ -176,20 +176,18 @@ def calculate_kde(segmented_data, grid_size=100, bw_adjust=0.5, team_id=None):
     x_mesh, y_mesh = np.meshgrid(x_grid, y_grid)
     positions = np.vstack([x_mesh.ravel(), y_mesh.ravel()])
     
-    # Perform the KDE for the league
     coords = np.vstack([x, y])
 
-    # Check for NaN values and replace them with 0
-    coords = np.nan_to_num(coords, nan=0.0)
+    # Filter out invalid coordinates (NaN and inf entries)
+    valid_mask = ~np.isnan(coords).any(axis=0) & ~np.isinf(coords).any(axis=0)
+    valid_coords = coords[:, valid_mask]
 
-    # Check for neginf values and replace them with 0
-    coords = np.nan_to_num(coords, neginf=0.0)
+    # Print how many entries were removed (if any)
+    if len(valid_coords[0]) < len(x):
+        print(f"Removed {len(x) - len(valid_coords[0])} invalid entries containing NaN or inf.")
 
-    # Check for posinf values and replace them with 0
-    coords = np.nan_to_num(coords, posinf=0.0)
-
-    # Proceed with KDE calculation after NaN correction
-    kde = gaussian_kde(coords, bw_method=bw_adjust)
+    # Perform the KDE for the league
+    kde = gaussian_kde(valid_coords, bw_method=bw_adjust)
     kde_values = np.reshape(kde(positions).T, x_mesh.shape)
     
     # Normalize by the number of games
