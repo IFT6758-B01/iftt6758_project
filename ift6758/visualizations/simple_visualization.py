@@ -150,6 +150,7 @@ def process_game(file_path):
     processed_data = []
 
     # Group by period first, then by team within each period
+    
     for period, period_data in game_data.groupby('period'):
         for team_id, team_data in period_data.groupby('team_id'):
             # Determine the goal once for the team in this period
@@ -246,29 +247,6 @@ def plot_shot_outcomes_by_distance(distill_data):
     plt.show()
 
 
-
-
-# Example usage
-pd.set_option('display.max_rows', None)  # Show all rows
-pd.set_option('display.max_columns', None)  # Show all columns
-data_folder = '../dataset/processed/2022'
-
-# Question 1
-all_data = get_all_data(data_folder)
-
-shot_goal_tally = tally_shots_and_goals(all_data)
-
-print(shot_goal_tally)
-# plot_shot_types_vs_goals(shot_goal_tally)
-
-# Question 2
-distance_data = process_all_games(data_folder)
-
-print(distance_data)
-# plot_shot_outcomes_by_distance(distance_data)
-
-
-
 def prepare_goal_percentage_data(shots_data):
     """
     Prepares the data for the goal percentage plot, grouping by shot type and distance.
@@ -333,8 +311,3 @@ def plot_goal_percentage_heatmap(pivot_table):
     plt.tight_layout()
     plt.show()
 
-# Prepare the data
-pivot_table = prepare_goal_percentage_data(distance_data)
-
-# Plot the heatmap
-plot_goal_percentage_heatmap(pivot_table)
