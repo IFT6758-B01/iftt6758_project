@@ -150,8 +150,7 @@ def process_game(file_path):
     processed_data = []
 
     # Group by period first, then by team within each period
-    print(game_data.head())
-
+    
     for period, period_data in game_data.groupby('period'):
         for team_id, team_data in period_data.groupby('team_id'):
             # Determine the goal once for the team in this period
@@ -311,3 +310,4 @@ def plot_goal_percentage_heatmap(pivot_table):
     # Show the plot
     plt.tight_layout()
     plt.show()
+

@@ -186,7 +186,7 @@ def calculate_kde(segmented_data, grid_size=100, bw_adjust=0.5, team_id=None):
     
     return x_grid, y_grid, kde_values
 
-
+ 
 def calculate_percentage_kde_difference(team_kde, league_kde):
     """
     Calculates the percentage difference between the team's KDE and the league-wide KDE.
@@ -230,6 +230,7 @@ def calculate_kde_differences_for_teams(segmented_data, grid_size=100, bw_adjust
         _, _, team_kde = calculate_kde(segmented_data, grid_size, bw_adjust, team_id)
         # kde_diff = calculate_percentage_kde_difference(team_kde, league_kde) # Calculate percentage difference
         kde_diff = team_kde - league_kde # Calculate raw difference
+
         kde_differences["Team " + str(team_id) + " Diff W/ League"] = kde_diff
         kde_differences["Team " + str(team_id) + " Shot Map"] = team_kde
 
@@ -319,5 +320,3 @@ def create_interactive_kde_plot(kde_differences, x_grid, y_grid, rink_image):
 
     # Step 6: Show the plot
     fig.show()
-
-
