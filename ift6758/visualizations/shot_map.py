@@ -177,7 +177,19 @@ def calculate_kde(segmented_data, grid_size=100, bw_adjust=0.5, team_id=None):
     positions = np.vstack([x_mesh.ravel(), y_mesh.ravel()])
     
     # Perform the KDE for the league
-    kde = gaussian_kde(np.vstack([x, y]), bw_method=bw_adjust)
+    coords = np.vstack([x, y])
+
+    # Check for NaN values and replace them with 0
+    coords = np.nan_to_num(coords, nan=0.0)
+
+    # Check for neginf values and replace them with 0
+    coords = np.nan_to_num(coords, neginf=0.0)
+
+    # Check for posinf values and replace them with 0
+    coords = np.nan_to_num(coords, posinf=0.0)
+
+    # Proceed with KDE calculation after NaN correction
+    kde = gaussian_kde(coords, bw_method=bw_adjust)
     kde_values = np.reshape(kde(positions).T, x_mesh.shape)
     
     # Normalize by the number of games
@@ -269,10 +281,10 @@ def calculate_kde_differences_for_teams(segmented_data, grid_size=100, bw_adjust
         _, _, team_kde = calculate_kde(segmented_data, grid_size, bw_adjust, team_id)
         # kde_diff = calculate_percentage_kde_difference(team_kde, league_kde) # Calculate percentage difference
         kde_diff = team_kde - league_kde # Calculate raw difference
-        kde_differences[team_id] = kde_diff
-        kde_differences[str(team_id) + " Original"] = team_kde
+        kde_differences["Team " + str(team_id) + " Diff W/ League"] = kde_diff
+        kde_differences["Team " + str(team_id) + " Shot Map"] = team_kde
 
-    kde_differences["League Original"] = league_kde
+    kde_differences["League Average Shot Map"] = league_kde
 
     return kde_differences, x_grid, y_grid
 
@@ -333,7 +345,7 @@ def create_interactive_kde_plot(kde_differences, x_grid, y_grid, rink_image):
 
         dropdown_buttons.append({
             'args': [{'z': [kde_diff.T], 'zmin': -np.max(np.abs(kde_diff)), 'zmax': np.max(np.abs(kde_diff))}],
-            'label': f'Team {team_id}',
+            'label': f'{team_id}',
             'method': 'restyle'
         })
 
@@ -358,27 +370,5 @@ def create_interactive_kde_plot(kde_differences, x_grid, y_grid, rink_image):
 
     # Step 6: Show the plot
     fig.show()
-
-
-
-
-pd.set_option('display.max_rows', None)  # Show all rows
-pd.set_option('display.max_columns', None)  # Show all columns
-
-# Step 1: Load season data
-season_data = load_season_data('../dataset/processed/2022')
-
-# Step 2: Segment the data by team, game, and period
-segmented_data = segment_shot_data(season_data)
-
-# Step 3: Calculate the KDE differences for all teams
-kde_differences, x_grid, y_grid = calculate_kde_differences_for_teams(segmented_data, grid_size=100, bw_adjust=0.2)
-
-# Step 4: Provide the path to the rink image 
-rink = Image.open("rink.png")
-
-# Step 4: Create the interactive plot
-create_interactive_kde_plot(kde_differences, x_grid, y_grid, rink)
-
 
 
