@@ -146,7 +146,7 @@ def aggregate_data(segmented_data, team=None):
 
 def calculate_kde(segmented_data, grid_size=100, bw_adjust=0.5, team_id=None):
     """
-    Calculates the average KDE, normalized by the number of games.
+    Calculates the average KDE.
 
     Parameters:
         segmented_data (dict): Nested dictionary where data is segmented by team, game, and period.
@@ -164,68 +164,29 @@ def calculate_kde(segmented_data, grid_size=100, bw_adjust=0.5, team_id=None):
     x = data['x_coord']
     y = data['y_coord']
     
-    # Count the number of unique games
-    num_games = data['game_id'].nunique()
-    if team_id is None:
-        # Times 2, as each game has two teams
-        num_games = num_games * 2
-    
     # Set up the grid
     x_grid = np.linspace(-100, 100, grid_size)
     y_grid = np.linspace(-42.5, 42.5, grid_size)
     x_mesh, y_mesh = np.meshgrid(x_grid, y_grid)
     positions = np.vstack([x_mesh.ravel(), y_mesh.ravel()])
     
+    coords = np.vstack([x, y])
+
+    # Filter out invalid coordinates (NaN and inf entries)
+    valid_mask = ~np.isnan(coords).any(axis=0) & ~np.isinf(coords).any(axis=0)
+    valid_coords = coords[:, valid_mask]
+
+    # Print how many entries were removed (if any)
+    if len(valid_coords[0]) < len(x):
+        print(f"Removed {len(x) - len(valid_coords[0])} invalid entries containing NaN or inf.")
+
     # Perform the KDE for the league
-    kde = gaussian_kde(np.vstack([x, y]), bw_method=bw_adjust)
+    kde = gaussian_kde(valid_coords, bw_method=bw_adjust)
     kde_values = np.reshape(kde(positions).T, x_mesh.shape)
-    
-    # Normalize by the number of games
-    kde_values /= num_games
     
     return x_grid, y_grid, kde_values
 
-
-def plot_kde_difference(segmented_data, team_id, grid_size=100, bw_adjust=0.5):
-    """
-    Plots the difference between a team's KDE and the league-wide KDE using Plotly.
-
-    Parameters:
-        segmented_data (dict): Nested dictionary where data is segmented by team, game, and period.
-        team_id (int): The ID of the team to calculate the KDE for.
-        grid_size (int): Resolution of the grid for KDE.
-        bw_adjust (float): Bandwidth adjustment for the KDE.
-    """
-    # Calculate the league KDE
-    x_grid, y_grid, league_kde = calculate_kde(segmented_data, grid_size, bw_adjust)
-    
-    # Calculate the team's KDE
-    _, _, team_kde = calculate_kde(segmented_data, grid_size, bw_adjust, team_id)
-
-    # Calculate the difference between the team's KDE and the league KDE
-    kde_diff = team_kde - league_kde
-    
-    # Plot the difference using Plotly's imshow
-    fig = px.imshow(
-        kde_diff,
-        x=x_grid,
-        y=y_grid,
-        labels={'x': 'X Coordinate (Feet)', 'y': 'Y Coordinate (Feet)'},
-        title=f'Difference in Shot Density from League Average for Team {team_id}',
-        color_continuous_scale='RdBu',  # Red for above average, blue for below average
-        zmin=-np.max(np.abs(kde_diff)),  # Set limits to symmetric around zero
-        zmax=np.max(np.abs(kde_diff)),
-        aspect='auto',
-        origin='lower'
-    )
-
-    # Adjust axis properties for better readability
-    fig.update_xaxes(showgrid=False, zeroline=False)
-    fig.update_yaxes(showgrid=False, zeroline=False)
-
-    fig.show()
-
-
+ 
 def calculate_percentage_kde_difference(team_kde, league_kde):
     """
     Calculates the percentage difference between the team's KDE and the league-wide KDE.
@@ -269,10 +230,11 @@ def calculate_kde_differences_for_teams(segmented_data, grid_size=100, bw_adjust
         _, _, team_kde = calculate_kde(segmented_data, grid_size, bw_adjust, team_id)
         # kde_diff = calculate_percentage_kde_difference(team_kde, league_kde) # Calculate percentage difference
         kde_diff = team_kde - league_kde # Calculate raw difference
-        kde_differences[team_id] = kde_diff
-        kde_differences[str(team_id) + " Original"] = team_kde
 
-    kde_differences["League Original"] = league_kde
+        kde_differences["Team " + str(team_id) + " Diff W/ League"] = kde_diff
+        kde_differences["Team " + str(team_id) + " Shot Map"] = team_kde
+
+    kde_differences["League Average Shot Map"] = league_kde
 
     return kde_differences, x_grid, y_grid
 
@@ -333,7 +295,7 @@ def create_interactive_kde_plot(kde_differences, x_grid, y_grid, rink_image):
 
         dropdown_buttons.append({
             'args': [{'z': [kde_diff.T], 'zmin': -np.max(np.abs(kde_diff)), 'zmax': np.max(np.abs(kde_diff))}],
-            'label': f'Team {team_id}',
+            'label': f'{team_id}',
             'method': 'restyle'
         })
 
@@ -358,27 +320,3 @@ def create_interactive_kde_plot(kde_differences, x_grid, y_grid, rink_image):
 
     # Step 6: Show the plot
     fig.show()
-
-
-
-
-pd.set_option('display.max_rows', None)  # Show all rows
-pd.set_option('display.max_columns', None)  # Show all columns
-
-# Step 1: Load season data
-season_data = load_season_data('../dataset/processed/2022')
-
-# Step 2: Segment the data by team, game, and period
-segmented_data = segment_shot_data(season_data)
-
-# Step 3: Calculate the KDE differences for all teams
-kde_differences, x_grid, y_grid = calculate_kde_differences_for_teams(segmented_data, grid_size=100, bw_adjust=0.2)
-
-# Step 4: Provide the path to the rink image 
-rink = Image.open("rink.png")
-
-# Step 4: Create the interactive plot
-create_interactive_kde_plot(kde_differences, x_grid, y_grid, rink)
-
-
-
