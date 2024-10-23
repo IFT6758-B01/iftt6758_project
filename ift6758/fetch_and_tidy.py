@@ -9,6 +9,7 @@ import features.data_formatting
 from re import match
 from time import sleep
 from typing import Tuple
+from datetime import datetime
 
 def subprocess_popen_cmanager(args: list, timeout=30, verbose=False):
     """
@@ -169,12 +170,18 @@ def main():
         #Assert validity of CLI arguments `--year`, `--type`, `--games` and `--output`
         passed_args = _check_for_cli_args()
         print("Attempting to download games")
+        #Get a timestamp now
+        start_download_timestamp = datetime.now().strftime('%s')
         #Call CLI data acquisition NHLDataFetcher with passed_args if exists
         #Else download every regular season and playoffs games from season 2016-17 to 2023-24
         subprocess_popen_cmanager(passed_args or ['python', 'data/main.py', '-y', '2016-2023', '-t', '2,3'], timeout=1800)
         print("Filtering json, formatting to pandas DataFrame and saving to csv")
         #Call data formatting tidy pipeline on JSON in DATA_INPUT_PATH and save them to csv of pandas DataFrames
-        features.data_formatting.process_and_save_json_file(DATA_INPUT_PATH, DATA_OUTPUT_PATH)
+        features.data_formatting.process_and_save_json_file(
+          DATA_INPUT_PATH,
+          DATA_OUTPUT_PATH,
+          from_timestamp=start_download_timestamp
+        )
         #Move back to previous dir
         os.chdir(_CURRENT_DIR)
 

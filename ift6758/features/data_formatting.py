@@ -80,7 +80,7 @@ def parse_game_events(game_data: dict) -> pd.DataFrame:
     return df
 
 
-def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH : pathlib.Path) -> None:
+def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH : pathlib.Path, from_timestamp: str = None) -> None:
     """
     Process all .json files found in DATA_INPUT_PATH, convert to Pandas DataFrame and save them to csv in DATA_OUTPUT_PATH
 
@@ -89,11 +89,15 @@ def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH 
                                          Assumes the following hierarchy : DATA_INPUT_PATH/{season_folder}/{gameid}*.json
         DATA_OUTPUT_PATH (pathlib.Path) : Output directory of processed (DataFrames) data
                                           Copies hierarchy of DATA_INPUT_PATH for naming output csvs
+        from_timestamp (str) : Timestamp from epoch in seconds (datetime.datetime.strftime) from which files should be processed
 
     Returns:
         None
     """
     for game_json_file in DATA_INPUT_PATH.rglob("**/game*.json"):
+        #Check if file is older than `from_timestamp`
+        if from_timestamp is not None and int(game_json_file.stat().st_ctime) <= int(from_timestamp):
+            continue
         game_title = game_json_file.parts[-1]
         game_title_csv = re.sub('json$', 'csv', game_title)
         season_folder = game_json_file.parts[-2]
@@ -101,16 +105,16 @@ def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH 
         #Check if processed file already exists
         if output_file.exists():
             print(f'File {output_file} already exists. Skipping')
-        else:
-            #Check if DATA_OUTPUT_PATH/season_folder exists, else create it
-            if not output_file.parent.exists():
-                os.mkdir(output_file.parent)
-            with open(game_json_file, 'r') as open_file:
-                print(f'Processing {game_json_file}..')
-                game_dict = json.load(open_file)
-                df_game = parse_game_events(game_dict)
-                df_game.to_csv(output_file)
-                print(f'Saved csv of dataframe to {output_file}')
+            continue
+        #Check if DATA_OUTPUT_PATH/season_folder exists, else create it
+        if not output_file.parent.exists():
+            os.mkdir(output_file.parent)
+        with open(game_json_file, 'r') as open_file:
+            print(f'Processing {game_json_file}..')
+            game_dict = json.load(open_file)
+            df_game = parse_game_events(game_dict)
+            df_game.to_csv(output_file)
+            print(f'Saved csv of dataframe to {output_file}')
 
 
 
