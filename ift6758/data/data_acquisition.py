@@ -1,7 +1,6 @@
 # TODO
-# Reading into the API and automatically generate the game_ids
-# _add_ functionality to be able to aggregate data across multiple seasons
-
+# Change get_game_data to return else than a tuple to be able to use
+# concurrent.futures for multithreading
 import os
 import requests
 import time
@@ -144,7 +143,6 @@ class NHLDataFetcher:
                 if error:
                     print(f"Stopping download of Preseason Games due to an error with game ID: {game_id}")
                     break
-                time.sleep(1)
 
         # Regular season games
         def _get_season_regular():
@@ -154,7 +152,6 @@ class NHLDataFetcher:
                 if error:
                     print(f"Stopping download of Regular Season Games due to an error with game ID: {game_id}")
                     break
-                time.sleep(1)
 
         # Playoff games
         def _get_season_playoffs():
@@ -166,7 +163,6 @@ class NHLDataFetcher:
                         if error:
                             print(f"Stopping download of Playoff Games due to an error with game ID: {game_id}")
                             break
-                        time.sleep(1)
 
         # All-star game
         def _get_season_allstar():
@@ -196,7 +192,6 @@ if __name__ == '__main__':
   # Fetch data for each game
   for game_id in game_ids:
       data = fetcher.get_game_data(game_id)
-      time.sleep(1)  # Delay to avoid hitting the API too hard
 
   year = "2022"
   # Fetch data for a full season
