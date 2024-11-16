@@ -4,6 +4,7 @@
 import os
 import requests
 import time
+import json
 from sys import argv
 
 class NHLDataFetcher:
