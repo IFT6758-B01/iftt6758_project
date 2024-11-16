@@ -8,6 +8,7 @@ import pathlib
 import os
 import re
 import sys
+import concurrent.futures
 
 #Instanciate NHLDataFetcher parser
 def init_parser():
@@ -56,6 +57,13 @@ def init_parser():
     type=pathlib.Path,
     default=None,
     help=dedent(f"""Directory in which output should go to.\nDefaults to `../dataset/unprocessed`""")
+  )
+
+  parser.add_argument(
+    '-p', '--parallel',
+    type=int,
+    default=None,
+    help="Defining how many jobs in parallel for game fetching (0 for none)"
   )
 
   parser.add_argument(
@@ -119,7 +127,7 @@ def verify_args_parser(parser, args : argparse.Namespace = None):
     else:
       q_type = reg_match_arg(args.type)
       q_type = [ f'{int(type):02d}' for type in q_type ]
-    #Argument games
+    #Argument `games`
     if args.games == parser.get_default('games'):
       q_games = ['1231']
     else:
@@ -134,6 +142,9 @@ def verify_args_parser(parser, args : argparse.Namespace = None):
     DOWNLOAD_GAMES_DATA = True
     if int(q_games[-1]) > 1230:
       DOWNLOAD_GAMES_DATA = False
+    #Argument `parallel`
+    if args.parallel != parser.get_default('parallel'):
+        assert args.parallel < 20, f'Max parallel jobs is 20'
     #Argument `output`
     if args.output != parser.get_default('output'):
       assert pathlib.Path.is_dir(args.output), f'{args.output} is not a directory'
@@ -158,19 +169,23 @@ def main():
     return
   #Instanciate fetcher
   base_url = "https://api-web.nhle.com/v1/gamecenter/{}/play-by-play"
-  fetcher = NHLDataFetcher(base_url, save_dir = q_dir or None)
-  #Execute fetcher
-  if DOWNLOAD_GAMES_DATA:         #Fetch game-by-game if less than 1230 games required
-    for season in q_year:
-      for type in q_type:
-        for game in q_games:
-          if type == '03':
-            fetcher.get_playoffs_game_data(f'{season}{type}{game}')
-          else:
-            fetcher.get_game_data(f'{season}{type}{game}')
-  else:                           #Fetch season-by-season if more than 1230 games required
-    for season in q_year:
-      fetcher.get_season_data(season, q_type)
+  with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel or 5) as pool:
+    fetcher = NHLDataFetcher(base_url, save_dir = q_dir or None)
+    #Execute fetcher
+    if DOWNLOAD_GAMES_DATA:         #Fetch game-by-game if less than 1230 games required
+      for season in q_year:
+        for type in q_type:
+          for game in q_games:
+            if type == '03':
+              pool.submit(fetcher.get_playoffs_game_data, f'{season}{type}{game}')
+            else:
+              pool.submit(fetcher.get_game_data, f'{season}{type}{game}')
+    else:                           #Fetch season-by-season if more than 1230 games required
+      for season in q_year:
+        #Could not implement concurrent.futures for `get_season_data()` yet
+        #Need to refactor `get_game_data()` first
+        #See comments in data_acquisition for more details
+        fetcher.get_season_data(season, q_type)
 
 
 if __name__ == '__main__':
