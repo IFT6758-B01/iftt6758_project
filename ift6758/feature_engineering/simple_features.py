@@ -1,8 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pathlib
 
 
@@ -71,7 +69,7 @@ def determine_goal_location(shots_data):
             return (90, 0) if x_coord > 0 else (-90, 0)
         elif zone_code == 'D':  # Defensive zone
             return (-90, 0) if x_coord > 0 else (90, 0)
-    
+
     # Default to offensive goal at (0, 90) if no offensive/defensive zone shots found
     return (90, 0)
 
@@ -91,7 +89,7 @@ def calculate_new_metrics(period_data):
 
     # Determine the goal location based on the shots in the period
     goal_location = determine_goal_location(period_data)
-    
+
     # Calculate distance, angle, is_goal, and empty_net
     distances, angles = zip(*df_shots_goals.apply(
         lambda row: calculate_distance_and_angle(row['x_coord'], row['y_coord'], net_x=goal_location[0], net_y=goal_location[1]), axis=1
@@ -175,7 +173,7 @@ def augment_data(input_path, output_path):
 
     # Aggregate the data and calculate new metrics
     df_aggregate = aggregate_data(segmented_data)
-    
+
     output_file = output_path / "augmented_data.csv"
     df_aggregate.to_csv(output_file, index=False)
     print(f"Augmented data saved to {output_file}")

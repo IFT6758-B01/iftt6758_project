@@ -153,11 +153,10 @@ def augment_data_complex(all_data):
     Augments the raw data with new features and saves the augmented data to a CSV file.
 
     Parameters:
-        input_path (pathlib.Path): Path to the directory containing the raw data CSV files.
-        output_path (pathlib.Path): Path to the directory where augmented data will be saved.
+        all_data (pd.DataFrame): Pandas DataFrame of the shot events data with additional features
 
     Returns:
-        None
+        df_aggregate (pd.DataFrame): Pandas DataFrame of aggragated data
     """
     # Segment the data by team, game, and period
     segmented_data = sf.segment_shot_data(all_data)
@@ -185,36 +184,36 @@ def calculate_rebound_metrics(period_data):
         pd.DataFrame: DataFrame with rebound metrics added, recombined with non-rebound shots.
     """
     # Filter for rebound events
-    df_rebounds = period_data[period_data['rebound'] == True].copy()
+    df_rebounds = period_data[period_data['rebound'] == True]
 
-    if not df_rebounds.empty:
-        # Determine the goal location based on the shots in the period
-        goal_location = sf.determine_goal_location(period_data)
+    if df_rebounds.empty:
+        return period_data
 
-        # Calculate distance and angle for previous shots (rebound-related metrics)
-        last_distances, last_angles = zip(*df_rebounds.apply(
-            lambda row: sf.calculate_distance_and_angle(row['last_x_coord'], row['last_y_coord'], net_x=goal_location[0], net_y=goal_location[1]), axis=1
+    # Determine the goal location based on the shots in the period
+    goal_location = sf.determine_goal_location(period_data)
+
+    # Calculate distance and angle for previous shots (rebound-related metrics)
+    last_distances, last_angles = zip(*df_rebounds.apply(
+        lambda row: sf.calculate_distance_and_angle(row['last_x_coord'], row['last_y_coord'], net_x=goal_location[0], net_y=goal_location[1]), axis=1
         ))
 
-        # Calculate change in shot angle and speed for rebounds
-        df_rebounds['change_in_shot_angle'] = df_rebounds['angle_from_net'] - last_angles
-        df_rebounds['speed'] = df_rebounds['distance_from_last_event'] / df_rebounds['time_from_last_event']
+    # Calculate change in shot angle and speed for rebounds
+    df_rebounds['change_in_shot_angle'] = df_rebounds['angle_from_net'] - last_angles
+    df_rebounds['speed'] = df_rebounds['distance_from_last_event'] / df_rebounds['time_from_last_event']
 
-        # Fill missing or invalid values in speed with 0 (e.g., division by zero)
-        #df_rebounds['speed'].fillna(0, inplace=True)
+    # Fill missing or invalid values in speed with 0 (e.g., division by zero)
+    #df_rebounds['speed'].fillna(0, inplace=True)
 
-        # Identify non-rebound shots
-        df_non_rebounds = period_data[period_data['rebound'] == False].copy()
+    # Identify non-rebound shots
+    df_non_rebounds = period_data[period_data['rebound'] == False]
 
-        # Combine rebound and non-rebound DataFrames
-        combined_data = pd.concat([df_rebounds, df_non_rebounds], ignore_index=True)
+    # Combine rebound and non-rebound DataFrames
+    combined_data = pd.concat([df_rebounds, df_non_rebounds], ignore_index=True)
 
-        # Ensure the combined data retains the original order
-        combined_data.sort_index(inplace=True)
+    # Ensure the combined data retains the original order
+    combined_data.sort_index(inplace=True)
 
-        return combined_data
-    else:
-        return period_data
+    return combined_data
 
 
 
@@ -223,19 +222,14 @@ def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH 
     Process all .json files found in DATA_INPUT_PATH, convert to Pandas DataFrame and save them to csv in DATA_OUTPUT_PATH
 
     Parameters:
-        DATA_INPUT_PATH (pathlib.Path) : Input directory of unprocessed data
-                                         Assumes the following hierarchy : DATA_INPUT_PATH/{season_folder}/{gameid}*.json
+        DATA_INPUT_PATH (pathlib.Path)  : Input directory of unprocessed data
+                                          Assumes the following hierarchy : DATA_INPUT_PATH/{season_folder}/{gameid}*.json
         DATA_OUTPUT_PATH (pathlib.Path) : Output directory of processed (DataFrames) data
                                           Copies hierarchy of DATA_INPUT_PATH for naming output csvs
-        from_timestamp (str) : Timestamp from epoch in seconds (datetime.datetime.strftime) from which files should be processed
-
     Returns:
         None
     """
     for game_json_file in DATA_INPUT_PATH.rglob("**/game*.json"):
-        #Check if file is older than `from_timestamp`
-        if from_timestamp is not None and int(game_json_file.stat().st_ctime) <= int(from_timestamp):
-            continue
         game_title = game_json_file.parts[-1]
         game_title_csv = re.sub('json$', 'csv', game_title)
         season_folder = game_json_file.parts[-2]
@@ -244,9 +238,6 @@ def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH 
         if output_file.exists():
             print(f'File {output_file} already exists. Skipping')
             continue
-        #Check if DATA_OUTPUT_PATH/season_folder exists, else create it
-        if not output_file.parent.exists():
-            os.mkdir(output_file.parent)
         with open(game_json_file, 'r') as open_file:
             print(f'Processing {game_json_file}..')
             game_dict = json.load(open_file)
@@ -266,4 +257,3 @@ output_path = pathlib.Path(output_directory)
 output_path.mkdir(parents=True, exist_ok=True)
 
 process_and_save_json_file(input_path, output_path)
-
