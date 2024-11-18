@@ -5,14 +5,20 @@ import os
 import requests
 import time
 import json
+import concurrent.futures
 from sys import argv
+from format_string import StringColor
+
+# Instantiate class for color outputing methods
+StringColor = StringColor()
 
 class NHLDataFetcher:
-    def __init__(self, base_url, save_dir=None):
+    def __init__(self, base_url, save_dir=None, pool : concurrent.futures.ThreadPoolExecutor = None):
         # Use environment variable for file path if provided
         self.get_root_path = self._get_root_path()
         self.save_dir = os.getenv('NHL_DATA_INPUT_PATH') or save_dir or f'{self.get_root_path}/dataset/unprocessed/'
         self.base_url = base_url
+        self.pool = pool
 
     def _get_exec_path(self):
         return os.path.abspath(argv[0]).split('/')[:-1]
@@ -36,6 +42,10 @@ class NHLDataFetcher:
         nth_game = int(game_id[-4:])
 
         def playoffs_gameid_generator(game: int):
+        """
+        Transform game to playoff count base
+        See help(NHLDataFetcher.get_playoffs_game_data)
+        """
             round = 1
             matchup = 1
             res = 0
@@ -51,33 +61,34 @@ class NHLDataFetcher:
                         if round < 4:
                             round += 1
                         else:
-                            print(f'{game}th playoff game does not exist')
+                            print(StringColor.error('[ERROR] ') + f'{game}th playoff game does not exist')
                             return None
                 game = res
             return f'0{round}{matchup}{game}'
 
-        while True:
-            #Match nth_game to potential playoff_game_id
+        base_game_id = game_id[:-4]
+        suffix_game_id = game_id[-4:]
+
+        def substitute_playoff_game_id(base_game_id, nth_game):
+        """
+        Wrapper function for NHLDataFetcher.get_playoffs_game_data.playoffs_gameid_generator
+        Takes full gameid and apply playoff base transformation to game_id suffix
+        See help(NHLDataFetcher.get_playoffs_game_data)
+        """
             playoff_game_id = playoffs_gameid_generator(nth_game)
             if playoff_game_id is None:
-                return
-            #Truncate last 4 char corresponding to nth_game wanted
-            game_id = game_id[:-4]
-            #Replace with potential playoff_game_id
-            game_id = game_id + playoff_game_id
-            #Try downloading corresponding game
-            ret, _ = self.get_game_data(game_id)
-            if ret is not None:
-                break
-            else :
-                nth_game += 1
-       # while ret is None:
-       #     #If not available, increment nth_game and fetch new potential
-       #     #playoff_game_id
-       #     nth_game += 1
-       #     playoff_game_id = playoffs_gameid_generator(nth_game)
-       #     game_id = game_id[:-4]
-       #     game_id = game_id + playoff_game_id
+                print(StringColor.error('[ERROR] ') + 'Invalid game_id')
+                return None
+            game_id = base_game_id + playoff_game_id
+            return game_id
+
+        failure = True
+        while failure:
+            playoff_game_id = substitute_playoff_game_id(base_game_id, nth_game)
+            data, failure = self.get_game_data(playoff_game_id)
+            nth_game += 1
+
+        return data
 
 
     def get_game_data(self, game_id):
@@ -92,7 +103,7 @@ class NHLDataFetcher:
 
         # Check if the data is already cached
         if os.path.exists(filename):
-            print(f"Loading cached data for game ID: {game_id}")
+            print(StringColor.info("[INFO] ") + f"Loading cached data for game ID: {game_id}")
             with open(filename, 'r') as file:
                 #Return JSON object (dict) to feed to ipywidget debugger
                 #Can also return str with file.read() in other cases
@@ -107,21 +118,21 @@ class NHLDataFetcher:
 
             data = response.json()
             if 'error' in data:
-                print(f"Error found in response for game ID {game_id}: {data['error']}")
+                print(StringColor.error('ERROR ') + f"Error found in response for game ID {game_id}: {data['error']}")
                 return None, True
 
             os.makedirs(season_folder, exist_ok=True)  # Ensure directory exists
             with open(filename, 'w') as file:
                 file.write(response.text)
 
-            print(f"Successfully downloaded and cached data for game ID: {game_id}")
+            print(StringColor.success('[SUCCESS] ') + f"Successfully downloaded and cached data for game ID: {game_id}")
             return data, False
 
         except requests.exceptions.HTTPError as http_err:
-            print(f"HTTP error occurred for game ID {game_id}: {http_err}")
+            print(StringColor.warning('[WARNING] ') + f"HTTP error occurred for game ID {game_id}: {http_err}")
             return None, True
         except Exception as err:
-            print(f"An error occurred for game ID {game_id}: {err}")
+            print(StringColor.warning('[WARNING] ') + f"An error occurred for game ID {game_id}: {err}")
             return None, True
 
     def get_season_data(self, year, types: list[str]):
@@ -135,23 +146,31 @@ class NHLDataFetcher:
         else:
             num_games = 1230
 
+        pre_season_games = []
+        regular_season_games = []
+        playoffs_season_games = []
+
         # Preseason games
         def _get_season_preseason():
             for game_number in range(1, num_games+1):
                 game_id = f"{year}01{game_number:04d}"
-                data, error = self.get_game_data(game_id)
-                if error:
-                    print(f"Stopping download of Preseason Games due to an error with game ID: {game_id}")
-                    break
+                pre_season_games.append(game_id)
+            return pre_season_games
+                #data, error = self.get_game_data(game_id)
+                #if error:
+                #    print(f"Stopping download of Preseason Games due to an error with game ID: {game_id}")
+                #    break
 
         # Regular season games
         def _get_season_regular():
             for game_number in range(1, num_games+1):
                 game_id = f"{year}02{game_number:04d}"
-                data, error = self.get_game_data(game_id)
-                if error:
-                    print(f"Stopping download of Regular Season Games due to an error with game ID: {game_id}")
-                    break
+                regular_season_games.append(game_id)
+            return regular_season_games
+                #data, error = self.get_game_data(game_id)
+                #if error:
+                #    print(f"Stopping download of Regular Season Games due to an error with game ID: {game_id}")
+                #    break
 
         # Playoff games
         def _get_season_playoffs():
@@ -159,18 +178,20 @@ class NHLDataFetcher:
                 for matchup_number in range(1, 9):  # Each round has up to 8 matchups
                     for game_number in range(1, 8):  # Each matchup has up to 7 games
                         game_id = f"{year}030{round_number}{matchup_number}{game_number}"
-                        data, error = self.get_game_data(game_id)
-                        if error:
-                            print(f"Stopping download of Playoff Games due to an error with game ID: {game_id}")
-                            break
+                        playoffs_season_games.append(game_id)
+            return playoffs_season_games
+                        #data, error = self.get_game_data(game_id)
+                        #if error:
+                        #    print(f"Stopping download of Playoff Games due to an error with game ID: {game_id}")
+                        #    break
 
         # All-star game
         def _get_season_allstar():
             data, error = self.get_game_data(f"{year}040001")
             if error:
-                print(f"Stopping download of All-Star Game due to an error with game ID: {game_id}")
+                print(StringColor.warning('[WARNING] ') + f"Stopping download of All-Star Game due to an error with game ID: {game_id}")
 
-            print(f"Completed downloading data for the {year}-{int(year)+1} NHL season.")
+            print(StringColor.success('[SUCCESS] ') + f"Completed downloading data for the {year}-{int(year)+1} NHL season.")
 
         type_dict = {
             '01': _get_season_preseason,
@@ -178,8 +199,20 @@ class NHLDataFetcher:
             '03': _get_season_playoffs,
             '04': _get_season_allstar
         }
+
         for _type in types:
-            type_dict[_type]()
+            download_list = type_dict[_type]()
+            # From https://docs.python.org/3/library/concurrent.futures.html#threadpoolexecutor-example
+            future_to_gameid = { self.pool.submit(self.get_game_data, game_id): game_id for game_id in download_list }
+            count_failed = 0
+            for future in concurrent.futures.as_completed(future_to_gameid):
+                game_id = future_to_gameid[future]
+                data, failure = future.result()
+                if failure:
+                    count_failed += 1
+            print()
+            print(StringColor.warning('[WARNING] ') + f'RESULTS:\nFailed downloading {count_failed} games for type {_type}\n')
+
 
 if __name__ == '__main__':
   raise RuntimeError('This file is not meant to be executed as main script')
