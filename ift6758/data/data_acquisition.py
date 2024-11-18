@@ -156,10 +156,6 @@ class NHLDataFetcher:
                 game_id = f"{year}01{game_number:04d}"
                 pre_season_games.append(game_id)
             return pre_season_games
-                #data, error = self.get_game_data(game_id)
-                #if error:
-                #    print(f"Stopping download of Preseason Games due to an error with game ID: {game_id}")
-                #    break
 
         # Regular season games
         def _get_season_regular():
@@ -167,10 +163,6 @@ class NHLDataFetcher:
                 game_id = f"{year}02{game_number:04d}"
                 regular_season_games.append(game_id)
             return regular_season_games
-                #data, error = self.get_game_data(game_id)
-                #if error:
-                #    print(f"Stopping download of Regular Season Games due to an error with game ID: {game_id}")
-                #    break
 
         # Playoff games
         def _get_season_playoffs():
@@ -180,10 +172,6 @@ class NHLDataFetcher:
                         game_id = f"{year}030{round_number}{matchup_number}{game_number}"
                         playoffs_season_games.append(game_id)
             return playoffs_season_games
-                        #data, error = self.get_game_data(game_id)
-                        #if error:
-                        #    print(f"Stopping download of Playoff Games due to an error with game ID: {game_id}")
-                        #    break
 
         # All-star game
         def _get_season_allstar():

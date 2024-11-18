@@ -11,6 +11,7 @@ import sys
 sys.path.append(str(pathlib.Path(__file__).parents[1].absolute().resolve()))
 import data.format_string
 
+# Instantiate class for color outputing methods
 StringColor = data.format_string.StringColor()
 
 def parse_game_events(game_data: dict) -> pd.DataFrame:

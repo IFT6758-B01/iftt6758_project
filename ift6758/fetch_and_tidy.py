@@ -12,6 +12,7 @@ from typing import Tuple
 from datetime import datetime
 import data.format_string
 
+# Instantiate class for color outputing methods
 StringColor = data.format_string.StringColor()
 
 def subprocess_popen_cmanager(args: list, timeout=30, verbose=False):
