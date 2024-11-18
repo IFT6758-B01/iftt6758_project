@@ -6,6 +6,12 @@ import json
 import pathlib
 import re
 import pandas as pd
+import sys
+#Allows for module import in different folder
+sys.path.append(str(pathlib.Path(__file__).parents[1].absolute().resolve()))
+import data.format_string
+
+StringColor = data.format_string.StringColor()
 
 def parse_game_events(game_data: dict) -> pd.DataFrame:
     """
@@ -104,17 +110,17 @@ def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH 
         output_file = DATA_OUTPUT_PATH.joinpath(season_folder, game_title_csv)
         #Check if processed file already exists
         if output_file.exists():
-            print(f'File {output_file} already exists. Skipping')
+            print(StringColor.info('[INFO ]') + f'File {output_file} already exists. Skipping')
             continue
         #Check if DATA_OUTPUT_PATH/season_folder exists, else create it
         if not output_file.parent.exists():
             os.mkdir(output_file.parent)
         with open(game_json_file, 'r') as open_file:
-            print(f'Processing {game_json_file}..')
+            print(StringColor.info('[INFO] ') + f'Processing {game_json_file}..')
             game_dict = json.load(open_file)
             df_game = parse_game_events(game_dict)
             df_game.to_csv(output_file)
-            print(f'Saved csv of dataframe to {output_file}')
+            print(StringColor.success('[SUCCESS] ') + f'Saved csv of dataframe to {output_file}')
 
 
 

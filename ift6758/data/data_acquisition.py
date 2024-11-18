@@ -42,10 +42,10 @@ class NHLDataFetcher:
         nth_game = int(game_id[-4:])
 
         def playoffs_gameid_generator(game: int):
-        """
-        Transform game to playoff count base
-        See help(NHLDataFetcher.get_playoffs_game_data)
-        """
+            """
+            Transform game to playoff count base
+            See help(NHLDataFetcher.get_playoffs_game_data)
+            """
             round = 1
             matchup = 1
             res = 0
@@ -70,11 +70,11 @@ class NHLDataFetcher:
         suffix_game_id = game_id[-4:]
 
         def substitute_playoff_game_id(base_game_id, nth_game):
-        """
-        Wrapper function for NHLDataFetcher.get_playoffs_game_data.playoffs_gameid_generator
-        Takes full gameid and apply playoff base transformation to game_id suffix
-        See help(NHLDataFetcher.get_playoffs_game_data)
-        """
+            """
+            Wrapper function for NHLDataFetcher.get_playoffs_game_data.playoffs_gameid_generator
+            Takes full gameid and apply playoff base transformation to game_id suffix
+            See help(NHLDataFetcher.get_playoffs_game_data)
+            """
             playoff_game_id = playoffs_gameid_generator(nth_game)
             if playoff_game_id is None:
                 print(StringColor.error('[ERROR] ') + 'Invalid game_id')
