@@ -217,7 +217,7 @@ def calculate_rebound_metrics(period_data):
 
 
 
-def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH : pathlib.Path, from_timestamp: str = None) -> None:
+def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH : pathlib.Path) -> None:
     """
     Process all .json files found in DATA_INPUT_PATH, convert to Pandas DataFrame and save them to csv in DATA_OUTPUT_PATH
 
@@ -233,7 +233,9 @@ def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH 
         game_title = game_json_file.parts[-1]
         game_title_csv = re.sub('json$', 'csv', game_title)
         season_folder = game_json_file.parts[-2]
-        output_file = DATA_OUTPUT_PATH.joinpath(season_folder, game_title_csv)
+        output_file = DATA_OUTPUT_PATH.joinpath(season_folder)
+        output_file.mkdir(parents=True, exist_ok=True)
+        output_file = output_file.joinpath(game_title_csv)
         #Check if processed file already exists
         if output_file.exists():
             print(f'File {output_file} already exists. Skipping')
@@ -247,13 +249,56 @@ def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH 
             print(f'Saved csv of dataframe to {output_file}')
 
 
+def load_season_data(data_folder):
+    """
+    Reads all CSV files for a given season into a single DataFrame.
+
+    Parameters:
+        data_folder (str): Path to the folder containing the season's game CSV files.
+
+    Returns:
+        pd.DataFrame: Combined DataFrame containing all shots from the season.
+    """
+    all_data = []
+
+    for filename in os.listdir(data_folder):
+        if filename.endswith('.csv'):
+            file_path = os.path.join(data_folder, filename)
+            game_data = pd.read_csv(file_path)
+            all_data.append(game_data)
+
+    # Combine all game data into a single DataFrame
+    season_data = pd.concat(all_data, ignore_index=True)
+    return season_data
 
 
-input_directory = "../dataset/unprocessed/2017"
-output_directory = "../dataset/complex_engineered/"
+# Augment and combine all the data from 2016 - 2019
+def augment_dataset():
+    input_directory = "../dataset/unprocessed/"
+    output_directory = "../dataset/complex_engineered/"
+    
+    output_path = pathlib.Path(output_directory)
+    output_path.mkdir(parents=True, exist_ok=True)
 
-input_path = pathlib.Path(input_directory)
-output_path = pathlib.Path(output_directory)
-output_path.mkdir(parents=True, exist_ok=True)
+    years = [2016, 2017, 2018, 2019]
+    df_aggregate = pd.DataFrame()
+    all_data = []
 
-process_and_save_json_file(input_path, output_path)
+    for year in years:
+        input_path = os.path.join(input_directory, str(year))
+        input_path = pathlib.Path(input_path)
+        # Process the data
+        process_and_save_json_file(input_path, output_path)
+        all_data.append(load_season_data(output_path / str(year)))
+
+    df_aggregate = pd.concat(all_data, ignore_index=True)
+    output_file = output_path / "augmented_data.csv"
+    df_aggregate.to_csv(output_file, index=False)
+    print(f"Combined augmented data saved to {output_file}")
+
+    return df_aggregate
+
+
+
+
+

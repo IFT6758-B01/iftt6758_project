@@ -165,22 +165,48 @@ def augment_data(input_path, output_path):
     """
     output_path = pathlib.Path(output_path)
     output_path.mkdir(parents=True, exist_ok=True)
-
-    all_data = load_season_data(input_path)
-
-    # Segment the data by team, game, and period
-    segmented_data = segment_shot_data(all_data)
-
-    # Aggregate the data and calculate new metrics
-    df_aggregate = aggregate_data(segmented_data)
-
     output_file = output_path / "augmented_data.csv"
+
+    if output_file.exists():
+        print(f'File {output_file} already exists. Skipping')
+        df_aggregate = pd.read_csv(output_file)
+        
+    else:
+        print(f'Processing {input_path}..')
+
+        all_data = load_season_data(input_path)
+
+        # Segment the data by team, game, and period
+        segmented_data = segment_shot_data(all_data)
+
+        # Aggregate the data and calculate new metrics
+        df_aggregate = aggregate_data(segmented_data)
+
+        df_aggregate.to_csv(output_file, index=False)
+        print(f"Augmented data saved to {output_file}")
+
+    return df_aggregate
+
+
+# Augment and combine all the data from 2016 - 2019
+def augment_dataset():
+    # Paths for input and output directories
+    years = [2016, 2017, 2018, 2019]
+    df_aggregate = pd.DataFrame()
+    all_data = []
+    input_directory = "../dataset/processed"
+    output_directory = "../dataset/simple_engineered"
+
+    for year in years:
+        input_path = os.path.join(input_directory, str(year))
+        output_path = os.path.join(output_directory, str(year))
+        # Process the data
+        all_data.append(augment_data(input_path, output_path))
+
+    df_aggregate = pd.concat(all_data, ignore_index=True)
+    output_file_path = pathlib.Path(output_directory)
+    output_file = output_file_path / "augmented_data.csv"
     df_aggregate.to_csv(output_file, index=False)
-    print(f"Augmented data saved to {output_file}")
+    print(f"Combined augmented data saved to {output_file}")
 
-# Paths for input and output directories
-# input_directory = "../dataset/processed/2017"
-# output_directory = "../dataset/simple_engineered/2017"
-
-# Process the data
-# augment_data(input_directory, output_directory)
+    return df_aggregate
