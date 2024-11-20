@@ -210,3 +210,8 @@ def augment_dataset():
     print(f"Combined augmented data saved to {output_file}")
 
     return df_aggregate
+
+if __name__ == "__main__":
+
+    # Augment the dataset
+    augment_dataset()
