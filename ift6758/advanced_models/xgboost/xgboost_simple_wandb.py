@@ -68,14 +68,21 @@ def cumulative_proportion_of_goals(y_val, y_prob, log_to_run=None):
 
 # 4. Reliability Diagram (Calibration Curve)
 def reliability_diagram(y_val, y_prob, log_to_run=None):
-    df_val = pd.DataFrame({'y_val': y_val, 'y_prob': y_prob})
     CalibrationDisplay.from_predictions(y_val, y_prob, n_bins=10, strategy='uniform')
     plt.title("Reliability Diagram (Calibration Curve)")
+    
+    if log_to_run:
+        log_to_run.log({f"Reliability Diagram": wandb.Image(plt)})
+    '''
     if log_to_run:
         if wandb.run is not None:
             run.log({'reliability_diagram': plt})
             return
+    '''
+
     plt.show()
+    plt.close()
+    
 
 
 # Set paths
