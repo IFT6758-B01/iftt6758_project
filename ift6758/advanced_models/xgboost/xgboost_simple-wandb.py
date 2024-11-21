@@ -84,11 +84,26 @@ try:
 except NameError:
     current_dirpath = pathlib.Path(os.path.curdir).absolute().resolve()
 
+if not current_dirpath.parts[-3:] == ('ift6758', 'advanced_models', 'xgboost'):
+    raise Exception(
+        'It appears that this file is executed from the wrong location\n'
+        'Expected path: (root-->)ift6758/advanced_models/xgboost/\n'
+        f'Current path: {current_dirpath}'
+    )
+root_dirpath = current_dirpath.parents[1]
+
+# Load the dataset
+dataset_path = (root_dirpath / 'dataset' / 'complex_engineered' / 'augmented_data.csv')
+if not (dataset_path.is_file() and dataset_path.match('*.csv')):
+    raise Exception(
+        'It appears that the dataset either does not exist or is not a valid CSV\n'
+        f'Path: {dataset_path}'
+    )
+df = pd.read_csv(dataset_path)
+
 # Initialize WandB run
 run = wandb.init(entity="IFT6758_2024-B01" ,project="ms2-xgboost-models")
 
-# Load the dataset
-df = pd.read_csv("../dataset/complex_engineered/augmented_data.csv")
 
 # Feature selection (basic) and NaN values processing
 features = ['distance_from_net', 'angle_from_net']
