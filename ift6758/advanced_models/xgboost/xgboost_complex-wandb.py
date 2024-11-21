@@ -184,6 +184,7 @@ for f in X.columns:
 '''
 
 # Transform data to DMatrix data structure so that we can use xgb.cv
+# Reference: https://datascience.stackexchange.com/questions/12799/pandas-dataframe-to-dmatrix
 dtrain = xgb.DMatrix(data=X_train.values, label=y_train.values)
 dval = xgb.DMatrix(data=X_val.values, label=y_val.values)
 
@@ -198,7 +199,7 @@ params = {
     'colsample_bytree': 0.8
 }
 
-# Cross-validation (might also be used for hyperparameter tuning tho I need to read the docs more)
+# Cross-validation (might also be used for hyperparameter tuning tho I need to read the docs)
 cv_results = xgb.cv(
     params=params,
     dtrain=dtrain,
