@@ -52,7 +52,7 @@ def load_dataset():
     except NameError:
         current_dirpath = pathlib.Path(os.path.curdir).absolute().resolve()
 
-    if not current_dirpath.parts[-3:] == ('ift6758', 'advanced_models', 'neuro_network'):
+    if not current_dirpath.parts[-3:] == ('ift6758', 'advanced_models', 'neural_network'):
         raise Exception(
             'It appears that this file is executed from the wrong location\n'
             'Expected path: (root-->)ift6758/advanced_models/neuro_network/\n'
@@ -219,6 +219,86 @@ def train(train_loader, val_loader, X_train_tensor, y_train_tensor, X_val_tensor
     return model
 
 
+## 1. ROC Curve and AUC
+def roc_curve_and_auc(y_val, y_prob, log_to_run=None):
+    fpr, tpr, _ = roc_curve(y_val, y_prob)
+    roc_auc = auc(fpr, tpr)
+
+    # Plot ROC Curve
+    fig = plt.figure(figsize=(10, 6))
+    plt.plot(fpr, tpr, label=f"XGBoost Classifier (AUC = {roc_auc:.2f})")
+    plt.plot([0, 1], [0, 1], 'k--', label="Random Classifier (AUC = 0.50)")
+    plt.title("Receiver Operating Characteristic (ROC) Curve")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.legend(loc="lower right")
+    if log_to_run:
+        if wandb.run is not None:
+            run.log({'roc_auc': plt})
+    plt.show()
+       
+## 2. Goal Rate by Percentile (Binned by 5%)
+def goal_rate_by_percentile(y_val, y_prob, log_to_run=None):
+    df_val = pd.DataFrame({'y_val': y_val, 'y_prob': y_prob})
+    df_val['percentile'] = pd.qcut(df_val['y_prob'], 100, labels=False, duplicates='drop') + 1  # Percentiles from 1 to 100
+    goal_rate_by_percentile = df_val.groupby('percentile')['y_val'].mean()
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(goal_rate_by_percentile.index, goal_rate_by_percentile, marker='o')
+    ax.set_title("Goal Rate by Percentile")
+    ax.set_xlabel("Shot Probability Model Percentile")
+    ax.set_ylabel("Goal Rate (#goals / (#goals + #no_goals))")
+    ax.set_ylim(0, 1)  # Set the y-axis range from 0 to 1
+    ax.grid(True)
+    ax.invert_xaxis()  # Reverse the x-axis
+
+    if log_to_run:
+        log_to_run.log({'Goal Rate by Percentile': wandb.Image(fig)})
+    plt.show()
+    plt.close(fig)
+    
+## 3. Cumulative Proportion of Goals by Percentile
+def cumulative_proportion_of_goals(y_val, y_prob, log_to_run=None):
+    df_val = pd.DataFrame({'y_val': y_val, 'y_prob': y_prob})
+    df_val = df_val.sort_values('y_prob', ascending=False).reset_index(drop=True)  # Sort by descending probability
+
+    # Calculate cumulative goals and proportion
+    cumulative_goals = df_val['y_val'].cumsum()
+    total_goals = df_val['y_val'].sum()
+    cumulative_goal_percentage = cumulative_goals / total_goals
+
+    # Percentile bins (from 100% to 0%)
+    percentiles = np.linspace(100, 0, len(cumulative_goal_percentage))
+
+    # Plot cumulative proportion of goals
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(percentiles, cumulative_goal_percentage, marker='o', label="Cumulative Proportion")
+    ax.set_title("Cumulative Proportion of Goals by Model Percentile")
+    ax.set_xlabel("Shot Probability Model Percentile")
+    ax.set_ylabel("Cumulative Proportion of Goals")
+    ax.grid(True)
+    ax.invert_xaxis()  # Reverse the x-axis
+
+    if log_to_run:
+        log_to_run.log({'Cumulative Proportion of Goals': wandb.Image(fig)})
+    plt.show()
+    plt.close(fig)
+
+# 4. Reliability Diagram (Calibration Curve)
+def reliability_diagram(y_val, y_prob, log_to_run=None):
+    CalibrationDisplay.from_predictions(y_val, y_prob, n_bins=30, strategy='uniform')
+    plt.title("Reliability Diagram (Calibration Curve)")
+    if log_to_run:
+        log_to_run.log({f"Reliability Diagram": wandb.Image(plt)})
+    '''
+    if log_to_run:
+        if wandb.run is not None:
+            run.log({'reliability_diagram': plt})
+            return
+    '''
+    plt.show()
+
+
 def evaluate_model_and_plot(model, X_val, y_val, log_to_run=None):
     """
     Evaluate a trained model on the validation set and plot performance metrics:
@@ -232,70 +312,25 @@ def evaluate_model_and_plot(model, X_val, y_val, log_to_run=None):
         X_val (pd.DataFrame or torch.Tensor): Validation feature set.
         y_val (pd.Series or torch.Tensor): Validation target values.
     """
-    # If PyTorch model, ensure it's in evaluation mode
-    if hasattr(model, "eval"):
-        model.eval()
-        with torch.no_grad():
-            y_prob = model(X_val).numpy().flatten()
-    else:
-        # If sklearn-like model
-        y_prob = model.predict_proba(X_val)[:, 1]
+    model.eval()
+    with torch.no_grad():
+        y_prob = model(X_val).numpy().flatten()
 
     # Ensure y_val is numpy array
     y_val = y_val.values if isinstance(y_val, pd.Series) else y_val
+    y_val = y_val.flatten()
 
     # 1. ROC Curve and AUC
-    fpr, tpr, _ = roc_curve(y_val, y_prob)
-    roc_auc = auc(fpr, tpr)
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(fpr, tpr, label=f"Model (AUC = {roc_auc:.2f})")
-    plt.plot([0, 1], [0, 1], 'k--', label="Random Baseline (AUC = 0.50)")
-    plt.title("Receiver Operating Characteristic (ROC) Curve")
-    plt.xlabel("False Positive Rate")
-    plt.ylabel("True Positive Rate")
-    plt.legend(loc="lower right")
-    if log_to_run:
-        if wandb.run is not None:
-            run.log({'goal_rate_percentile': plt})
-    plt.show()
+    roc_curve_and_auc(y_val, y_prob, log_to_run=log_to_run)
 
     # 2. Goal Rate by Percentile
-    df_val = pd.DataFrame({'y_val': y_val.flatten(), 'y_prob': y_prob})
-    df_val['percentile'] = pd.qcut(df_val['y_prob'], 20, labels=False, duplicates='drop') + 1  # Percentiles (5% bins)
-    goal_rate_by_percentile = df_val.groupby('percentile')['y_val'].mean()
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(goal_rate_by_percentile.index, goal_rate_by_percentile, marker='o')
-    plt.title("Goal Rate by Percentile")
-    plt.xlabel("Model Percentile")
-    plt.ylabel("Goal Rate (#goals / (#goals + #no_goals))")
-    if log_to_run:
-        if wandb.run is not None:
-            run.log({'cumul_goals': plt})
-    plt.show()
+    goal_rate_by_percentile(y_val, y_prob, log_to_run=log_to_run)
 
     # 3. Cumulative Proportion of Goals by Percentile
-    cumulative_goals = df_val.sort_values('y_prob', ascending=False)['y_val'].cumsum()
-    total_goals = df_val['y_val'].sum()
-    cumulative_goal_percentage = cumulative_goals / total_goals
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(np.linspace(0, 1, len(cumulative_goal_percentage)), cumulative_goal_percentage, marker='o')
-    plt.title("Cumulative Proportion of Goals by Model Percentile")
-    plt.xlabel("Model Percentile")
-    plt.ylabel("Cumulative Proportion of Goals")
-    if log_to_run:
-        if wandb.run is not None:
-            run.log({'cumul_goals': plt})
-    plt.show()
+    cumulative_proportion_of_goals(y_val, y_prob, log_to_run=log_to_run)
 
     # 4. Reliability Diagram
-    CalibrationDisplay.from_predictions(y_val, y_prob, n_bins=10, strategy='uniform')
-    plt.title("Reliability Diagram (Calibration Curve)")
-    if log_to_run:
-        log_to_run.log({f"Reliability Diagram": wandb.Image(plt)})
-    plt.show()
+    reliability_diagram(y_val, y_prob, log_to_run=log_to_run)
 
 num_epochs=50
 lr=0.0001
