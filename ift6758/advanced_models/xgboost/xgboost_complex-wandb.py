@@ -16,6 +16,7 @@ from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, roc_curve, auc
 from sklearn.calibration import CalibrationDisplay
+from sklearn.preprocessing import StandardScaler
 
 # taking this out cuz it will also run the xgboost in the other file
 #from xgboost_simple_wandb import roc_curve_and_auc, goal_rate_by_percentile, cumulative_proportion_of_goals, reliability_diagram
@@ -39,6 +40,7 @@ def roc_curve_and_auc(y_val, y_prob, log_to_run=None):
         if wandb.run is not None:
             run.log({'roc_auc': plt})
     plt.show()
+    plt.close(fig)
        
 ## 2. Goal Rate by Percentile (Binned by 5%)
 def goal_rate_by_percentile(y_val, y_prob, log_to_run=None):
@@ -148,6 +150,15 @@ features = [
     'speed'
 ]
 
+df['distance_from_last_event'] = df['distance_from_last_event'].fillna(df['distance_from_last_event'].mean())
+df['shot_type'] = df['shot_type'].fillna(df['shot_type'].mode()[0])
+df['x_coord'] = df['x_coord'].fillna(df['x_coord'].mean())
+df['y_coord'] = df['y_coord'].fillna(df['y_coord'].mean())
+df['last_event_type'] = df['last_event_type'].fillna(df['last_event_type'].mode()[0])
+df['time_from_last_event'] = df['time_from_last_event'].fillna(df['time_from_last_event'].mean())
+df['angle_from_net'] = df['angle_from_net'].fillna(df['angle_from_net'].mean())
+df['distance_from_net'] = df['distance_from_net'].fillna(df['distance_from_net'].mean())
+
 X = df[features]
 # Check if some features have more than 1% (arbritrary) of NaN values
 df_percent_nan = (df.isnull().sum() / df.count()).sort_values(ascending=False).loc[lambda x : x > 1.0]
@@ -165,15 +176,11 @@ if X.isnull().sum().sum() > 0:
 y = df['is_goal']
 y.fillna(0, inplace=True)
 
-# Initialize LabelEncoders
-shot_type_encoder = preprocessing.LabelEncoder()
-last_event_type_encoder = preprocessing.LabelEncoder()
+X = pd.get_dummies(X, columns=['shot_type', 'last_event_type'], drop_first=True)
 
-# Encode "shot_type"
-X['shot_type'] = shot_type_encoder.fit_transform(X['shot_type'].fillna("Unknown"))
-
-# Encode "last_event_type"
-X['last_event_type'] = last_event_type_encoder.fit_transform(X['last_event_type'].fillna("Unknown"))
+# Scale numerical features
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
 
 # Transform data to Dmatrix data structure
 #data_dmatrix = xgb.DMatrix(data=X, label=y)
@@ -196,8 +203,8 @@ for f in X.columns:
 
 # Transform data to DMatrix data structure so that we can use xgb.cv
 # Reference: https://datascience.stackexchange.com/questions/12799/pandas-dataframe-to-dmatrix
-dtrain = xgb.DMatrix(data=X_train.values, label=y_train.values)
-dval = xgb.DMatrix(data=X_val.values, label=y_val.values)
+dtrain = xgb.DMatrix(data=X_train, label=y_train)
+dval = xgb.DMatrix(data=X_val, label=y_val)
 
 params = {
     'objective': 'binary:logistic',
