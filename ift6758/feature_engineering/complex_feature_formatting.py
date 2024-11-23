@@ -99,7 +99,6 @@ def parse_game_events(game_data: dict) -> pd.DataFrame:
                     time_from_last_event = abs(game_seconds - previous_event['game_seconds'])
                     time_from_last_event = max(time_from_last_event, 1.0)  # Ensure time difference is at least 1 second
 
-
                 # Distance from the last event
                 if x_coord is not None and y_coord is not None and last_x_coord is not None and last_y_coord is not None:
                     distance_from_last_event = np.sqrt(
@@ -284,8 +283,6 @@ def load_season_data(data_folder):
 
 # Augment and combine all the data from 2016 - 2019
 def augment_dataset(data_input_path: Union[pathlib.Path, str] = '../dataset/unprocessed', data_output_path: Union[pathlib.Path, str] = '../dataset/complex_engineered', years: List[int] = None):
-    #input_directory = "../dataset/unprocessed/"
-    #output_directory = "../dataset/complex_engineered/"
     input_directory = pathlib.Path(data_input_path or os.getenv("DATA_INPUT_PATH", None))
     output_directory = pathlib.Path(data_output_path or os.getenv("DATA_OUTPUT_PATH", None))
 

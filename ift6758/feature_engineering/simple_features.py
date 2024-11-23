@@ -63,7 +63,7 @@ def determine_goal_location(shots_data):
     for index, row in shots_data.iterrows():
         zone_code = row['zone_code']
         x_coord = row['x_coord']
-        
+
         # If we find an offensive or defensive zone shot, we determine the goal location
         if zone_code == 'O':  # Offensive zone
             return (90, 0) if x_coord > 0 else (-90, 0)
@@ -170,7 +170,7 @@ def augment_data(input_path, output_path):
     if output_file.exists():
         print(f'File {output_file} already exists. Skipping')
         df_aggregate = pd.read_csv(output_file)
-        
+
     else:
         print(f'Processing {input_path}..')
 

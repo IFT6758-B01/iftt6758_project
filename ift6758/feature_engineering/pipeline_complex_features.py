@@ -25,10 +25,6 @@ def main():
         if (base_root_path / 'dataset').is_dir():
             break
         tmp_path_parts = tmp_path_parts[base_root_index+1:]
-        #raise FileNotFoundError('Cannot find root dir')
-    #if not base_root_path.is_dir():
-    #    print('Cannot find root dir')
-    #    return
     data_input_path = (base_root_path / 'ift6758' / 'dataset' / 'unprocessed')
     data_output_path = (base_root_path / 'ift6758' / 'dataset' / 'complex_engineered')
 
