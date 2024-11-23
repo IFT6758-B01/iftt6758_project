@@ -236,7 +236,7 @@ y_pred = model.predict(X_val)
 y_probas = model.predict_proba(X_val)[:, 1]
 
 # Saving model to Pickle
-model_basename = 'gaussian_naivebayes_simple.json'
+model_basename = 'gaussian_naivebayes_simple.pkl'
 model_path = current_dirpath / model_basename
 with open(model_path,'wb') as model_file:
     pickle.dump(model, model_file)
