@@ -263,6 +263,7 @@ X, y = filter_feature_and_NaN(load_dataset())
 train_loader, val_loader, X_train_tensor, y_train_tensor, X_val_tensor, y_val_tensor = split_and_load_data(X, y)
 model = train(train_loader, val_loader, X_train_tensor, y_train_tensor, X_val_tensor, y_val_tensor, num_epochs=num_epochs, lr=lr)
 evaluate_model_and_plot(model, X_val_tensor, y_val_tensor, log_to_run=run)
+torch.save(model, "best_model.pth")
 
 run.log_model(path="best_model.pth", name=f"neural-network-epoch{num_epochs}-lr{lr}")
               

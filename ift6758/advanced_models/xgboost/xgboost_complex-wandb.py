@@ -1,13 +1,24 @@
-import xgboost as xgb
-from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import make_scorer, log_loss
-import matplotlib.pyplot as plt
-import pathlib
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-import numpy as np
+#!/usr/bin/env python3
+
+#TODO:
+# -Figure out how to deal with NaN values in X (see lines 79-80)
+
+import sys
+sys.path.append('../')
+import wandb
 import pandas as pd
-import seaborn as sns
+import numpy as np
+import xgboost as xgb
+import pathlib
+import os
+from sklearn import preprocessing
+#from sklearn.grid_search import GridSearchCV
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+from plotting import roc_curve_and_auc, goal_rate_by_percentile, cumulative_proportion_of_goals, reliability_diagram
+
 
 # Set paths
 try:
@@ -31,6 +42,9 @@ if not (dataset_path.is_file() and dataset_path.match('*.csv')):
         f'Path: {dataset_path}'
     )
 df = pd.read_csv(dataset_path)
+
+# Initialize WandB run
+run = wandb.init(entity="IFT6758_2024-B01" ,project="ms2-xgboost-models", name="xgboost_complex_no_fillna")
 
 # Feature selection (basic) and NaN values processing
 features = [
@@ -93,47 +107,65 @@ X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_st
 dtrain = xgb.DMatrix(data=X_train, label=y_train)
 dval = xgb.DMatrix(data=X_val, label=y_val)
 
-# Define the parameter grid for hyperparameter search
-param_grid = {
-    'max_depth': [3, 4, 5, 6],           # Depth of the trees
-    'learning_rate': [0.01, 0.1, 0.2],  # Learning rate
-    'n_estimators': [50, 100, 200],     # Number of trees
-    'subsample': [0.6, 0.8, 1.0],       # Subsampling ratio of training instances
-    'colsample_bytree': [0.6, 0.8, 1.0] # Subsampling ratio of columns
+params = {
+    'objective': 'binary:logistic',
+    'eval_metric': 'logloss',
+    'max_depth': 6,
+    'learning_rate': 0.1,
+    'alpha': 10,
+    'n_estimators': 100,
+    'subsample': 0.8,
+    'colsample_bytree': 0.8
 }
 
-# Initialize XGBoost classifier
-xgb_model = xgb.XGBClassifier(
-    objective='binary:logistic',
-    eval_metric='logloss',
-    use_label_encoder=False
+# Cross-validation
+cv_results = xgb.cv(
+    params=params,
+    dtrain=dtrain,
+    num_boost_round=100,
+    nfold=5,
+    early_stopping_rounds=10,
+    metrics="logloss",
+    seed=42
 )
 
-# Define GridSearchCV
-grid_search = GridSearchCV(
-    estimator=xgb_model,
-    param_grid=param_grid,
-    scoring=make_scorer(log_loss, greater_is_better=False, needs_proba=True),  # Log-loss as metric
-    cv=3,  # 3-fold cross-validation
-    verbose=2,
-    n_jobs=-1  # Use all available processors
-)
+# Log best score and iteration
+best_iteration = len(cv_results)
+best_score = cv_results['test-logloss-mean'].min()
+print(f"Best Iteration: {best_iteration}, Best Log Loss: {best_score:.4f}")
 
-# Perform grid search
-grid_search.fit(X_train, y_train)
+# Train final model with best iteration
+params['n_estimators'] = best_iteration
+xgb_clf = xgb.train(params, dtrain, num_boost_round=best_iteration)
 
-# Best parameters and score
-print("Best Parameters:", grid_search.best_params_)
-print("Best Log Loss:", -grid_search.best_score_)
+# Save the model
+model_basename = 'xgb_classifier_cv.json'
+model_path = pathlib.Path.cwd() / model_basename
+xgb_clf.save_model(fname=model_path)
 
-# Get results in a DataFrame
-results = grid_search.cv_results_
+# After training the XGBoost model, predict probabilities for the validation set
+y_val_pred_prob = xgb_clf.predict(dval)  # dval is the validation set in DMatrix format
 
-# Convert to DataFrame for easier visualization
-results_df = pd.DataFrame(results)
+# Plotting and logging to WandB
+roc_curve_and_auc(y_val, y_val_pred_prob, log_to_run=run)
+goal_rate_by_percentile(y_val, y_val_pred_prob, log_to_run=run)
+cumulative_proportion_of_goals(y_val, y_val_pred_prob, log_to_run=run)
+reliability_diagram(y_val, y_val_pred_prob, log_to_run=run)
 
-# Sort by mean test score
-results_df = results_df.sort_values(by="mean_test_score", ascending=False)
+xgb.plot_importance(xgb_clf, importance_type='gain')  # Change to 'weight' or 'cover' if needed
+plt.title("Feature Importance by Gain")
+plt.show()
 
-# Save grid search results
-results_df.to_csv("grid_search_results.csv", index=False)
+xgb.plot_importance(xgb_clf, importance_type='weight')  
+plt.title("Feature Importance by Weight")
+plt.show()
+
+xgb.plot_importance(xgb_clf, importance_type='cover')  
+plt.title("Feature Importance by Cover")
+plt.show()
+
+# Log model to WandB run
+run.log_model(path=model_path, name=model_basename)
+
+# End run
+run.finish()
