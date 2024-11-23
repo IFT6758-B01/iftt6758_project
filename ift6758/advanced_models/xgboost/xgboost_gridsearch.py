@@ -82,9 +82,6 @@ X = pd.get_dummies(X, columns=['shot_type', 'last_event_type'], drop_first=True)
 scaler = StandardScaler()
 X = scaler.fit_transform(X)
 
-# Transform data to Dmatrix data structure
-#data_dmatrix = xgb.DMatrix(data=X, label=y)
-
 # Split into training and validation sets
 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 

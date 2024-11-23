@@ -51,7 +51,7 @@ for model_name, (model, features_subset) in {
     y_prob = model.predict_proba(X_val[features_subset])[:, 1]
     fpr, tpr, _ = roc_curve(y_val, y_prob)
     roc_auc = auc(fpr, tpr)
-    
+
     # Store results
     results[model_name] = {"roc_auc": roc_auc, "y_prob": y_prob}
 
@@ -92,7 +92,7 @@ for model_name, (model, features_subset) in {
     plt.figure(figsize=(10, 6))
     plt.plot(percentile_range, cumulative_goal_percentage, marker='o', label="Cumulative Goals")
     plt.title(f"Cumulative Proportion of Goals: {model_name}")
-    
+
     plt.xlabel("Shot Probability Model Percentile")
     plt.ylabel("Cumulative Proportion of Goals")
     plt.legend()
@@ -123,5 +123,3 @@ for model_name, result in results.items():
 wandb.log({"Model Comparison Table": metrics_table})
 
 wandb.finish()
-
-

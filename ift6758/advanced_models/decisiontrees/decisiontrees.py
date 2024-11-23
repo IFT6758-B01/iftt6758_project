@@ -166,9 +166,6 @@ def filter_feature_and_NaN(df):
 
     detect_nan_values(X)
 
-    #assert not np.isnan(X).any(), "NaN values found in training data"
-    #assert not np.isinf(X['speed']).any(), "Inf values found in training data"
-
     # One-hot encode categorical variables
     X = pd.get_dummies(X, columns=['shot_type', 'last_event_type'], drop_first=True)
 
@@ -235,9 +232,6 @@ params = {
 
 gs = GridSearchCV(estimator=model, param_grid=params, n_jobs=-1)
 gs.fit(X_train, y_train)
-
-# Log Cross Validation results
-#run.log({'cv_results': pd.DataFrame(gs.cv_results_)}, commit=False)
 
 # Get predictions
 y_pred = gs.predict(X_val)

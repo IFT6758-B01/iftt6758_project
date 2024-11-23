@@ -31,7 +31,7 @@ def roc_curve_and_auc(y_val, y_prob, log_to_run=None):
             run.log({'roc_auc': plt})
             return
     plt.show()
-       
+
 ## 2. Goal Rate by Percentile (Binned by 5%)
 def goal_rate_by_percentile(y_val, y_prob, log_to_run=None):
     df_val = pd.DataFrame({'y_val': y_val, 'y_prob': y_prob})
@@ -48,7 +48,7 @@ def goal_rate_by_percentile(y_val, y_prob, log_to_run=None):
             run.log({'goal_rate_percentile': plt})
             return
     plt.show()
-    
+
 ## 3. Cumulative Proportion of Goals by Percentile
 def cumulative_proportion_of_goals(y_val, y_prob, log_to_run=None):
     df_val = pd.DataFrame({'y_val': y_val, 'y_prob': y_prob})
@@ -70,19 +70,13 @@ def cumulative_proportion_of_goals(y_val, y_prob, log_to_run=None):
 def reliability_diagram(y_val, y_prob, log_to_run=None):
     CalibrationDisplay.from_predictions(y_val, y_prob, n_bins=10, strategy='uniform')
     plt.title("Reliability Diagram (Calibration Curve)")
-    
+
     if log_to_run:
         log_to_run.log({f"Reliability Diagram": wandb.Image(plt)})
-    '''
-    if log_to_run:
-        if wandb.run is not None:
-            run.log({'reliability_diagram': plt})
-            return
-    '''
 
     plt.show()
     plt.close()
-    
+
 
 
 # Set paths
@@ -153,10 +147,3 @@ cumulative_proportion_of_goals(y_val, y_probas_random, log_to_run=run)
 
 # End run
 run.finish()
-
-
-'''
-roc_curve_and_auc(y_val, y_probas[:, 1])
-goal_rate_by_percentile(y_val, y_probas[:, 1])
-cumulative_proportion_of_goals(y_val, y_probas[:, 1])
-'''
