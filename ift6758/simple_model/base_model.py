@@ -1,4 +1,5 @@
 import wandb
+import joblib
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -37,7 +38,7 @@ results = {}
 for model_name, (model, features_subset) in {
     "Distance Only": (models["Distance Only"], ['distance_from_net']),
     "Angle Only": (models["Angle Only"], ['angle_from_net']),
-    "Distance + Angle": (models["Distance + Angle"], features),
+    "Distance and Angle": (models["Distance + Angle"], features),
 }.items():
     # Initialize W&B run for the model
     wandb.init(
@@ -54,6 +55,9 @@ for model_name, (model, features_subset) in {
     
     # Store results
     results[model_name] = {"roc_auc": roc_auc, "y_prob": y_prob}
+
+    joblib.dump(model, f"{model_name.replace(' ', '_')}_logistic_model.pkl")
+    print(f"Saved model: {model_name} to {model_name.replace(' ', '_')}_logistic_model.pkl")
 
     # Log ROC Curve
     plt.figure()

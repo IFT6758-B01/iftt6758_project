@@ -299,6 +299,31 @@ def augment_dataset():
 
     return df_aggregate
 
+def augment_test_dataset():
+    input_directory = "../dataset/unprocessed/"
+    output_directory = "../dataset/complex_engineered/"
+    
+    output_path = pathlib.Path(output_directory)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    years = [2020]
+    df_aggregate = pd.DataFrame()
+    all_data = []
+
+    for year in years:
+        input_path = os.path.join(input_directory, str(year))
+        input_path = pathlib.Path(input_path)
+        # Process the data
+        process_and_save_json_file(input_path, output_path)
+        all_data.append(load_season_data(output_path / str(year)))
+
+    df_aggregate = pd.concat(all_data, ignore_index=True)
+    output_file = output_path / "augmented_test_data.csv"
+    df_aggregate.to_csv(output_file, index=False)
+    print(f"Combined augmented data saved to {output_file}")
+
+    return df_aggregate
+
 
 
 

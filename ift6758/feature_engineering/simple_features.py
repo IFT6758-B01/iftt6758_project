@@ -210,3 +210,25 @@ def augment_dataset():
     print(f"Combined augmented data saved to {output_file}")
 
     return df_aggregate
+
+def augment_test_dataset():
+    # Paths for input and output directories
+    years = [2020]
+    df_aggregate = pd.DataFrame()
+    all_data = []
+    input_directory = "../dataset/processed"
+    output_directory = "../dataset/simple_engineered"
+
+    for year in years:
+        input_path = os.path.join(input_directory, str(year))
+        output_path = os.path.join(output_directory, str(year))
+        # Process the data
+        all_data.append(augment_data(input_path, output_path))
+
+    df_aggregate = pd.concat(all_data, ignore_index=True)
+    output_file_path = pathlib.Path(output_directory)
+    output_file = output_file_path / "augmented_test_data.csv"
+    df_aggregate.to_csv(output_file, index=False)
+    print(f"Combined augmented data saved to {output_file}")
+
+    return df_aggregate

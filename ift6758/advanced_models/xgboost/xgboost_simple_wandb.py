@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import sys
+sys.path.append('../')
 import wandb
 import pandas as pd
 import numpy as np
@@ -10,79 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, roc_curve, auc
 from sklearn.calibration import CalibrationDisplay
 import matplotlib.pyplot as plt
-
-
-# Figure plots functions
-## 1. ROC Curve and AUC
-def roc_curve_and_auc(y_val, y_prob, log_to_run=None):
-    fpr, tpr, _ = roc_curve(y_val, y_prob)
-    roc_auc = auc(fpr, tpr)
-
-    # Plot ROC Curve
-    fig = plt.figure(figsize=(10, 6))
-    plt.plot(fpr, tpr, label=f"XGBoost Classifier (AUC = {roc_auc:.2f})")
-    plt.plot([0, 1], [0, 1], 'k--', label="Random Classifier (AUC = 0.50)")
-    plt.title("Receiver Operating Characteristic (ROC) Curve")
-    plt.xlabel("False Positive Rate")
-    plt.ylabel("True Positive Rate")
-    plt.legend(loc="lower right")
-    if log_to_run:
-        if wandb.run is not None:
-            run.log({'roc_auc': plt})
-            return
-    plt.show()
-       
-## 2. Goal Rate by Percentile (Binned by 5%)
-def goal_rate_by_percentile(y_val, y_prob, log_to_run=None):
-    df_val = pd.DataFrame({'y_val': y_val, 'y_prob': y_prob})
-    df_val['percentile'] = pd.qcut(df_val['y_prob'], 100, labels=False, duplicates='drop') + 1  # Percentiles from 1 to 100
-    goal_rate_by_percentile = df_val.groupby('percentile')['y_val'].mean()
-
-    fig = plt.figure(figsize=(10, 6))
-    plt.plot(goal_rate_by_percentile.index, goal_rate_by_percentile, marker='o')
-    plt.title("Goal Rate by Percentile")
-    plt.xlabel("Model Percentile")
-    plt.ylabel("Goal Rate (#goals / (#goals + #no_goals))")
-    if log_to_run:
-        if wandb.run is not None:
-            run.log({'goal_rate_percentile': plt})
-            return
-    plt.show()
-    
-## 3. Cumulative Proportion of Goals by Percentile
-def cumulative_proportion_of_goals(y_val, y_prob, log_to_run=None):
-    df_val = pd.DataFrame({'y_val': y_val, 'y_prob': y_prob})
-    cumulative_goals = df_val.sort_values('y_prob', ascending=False)['y_val'].cumsum()
-    total_goals = df_val['y_val'].sum()
-    cumulative_goal_percentage = cumulative_goals / total_goals
-
-    fig = plt.figure(figsize=(10, 6))
-    plt.plot(np.linspace(0, 1, len(cumulative_goal_percentage)), cumulative_goal_percentage, marker='o')
-    plt.title("Cumulative Proportion of Goals by Model Percentile")
-    plt.xlabel("Model Percentile")
-    plt.ylabel("Cumulative Proportion of Goals")
-    if log_to_run:
-        if wandb.run is not None:
-            run.log({'cumul_goals': plt})
-    plt.show()
-
-# 4. Reliability Diagram (Calibration Curve)
-def reliability_diagram(y_val, y_prob, log_to_run=None):
-    CalibrationDisplay.from_predictions(y_val, y_prob, n_bins=10, strategy='uniform')
-    plt.title("Reliability Diagram (Calibration Curve)")
-    
-    if log_to_run:
-        log_to_run.log({f"Reliability Diagram": wandb.Image(plt)})
-    '''
-    if log_to_run:
-        if wandb.run is not None:
-            run.log({'reliability_diagram': plt})
-            return
-    '''
-
-    plt.show()
-    plt.close()
-    
+from plotting import roc_curve_and_auc, goal_rate_by_percentile, cumulative_proportion_of_goals, reliability_diagram
 
 
 # Set paths
@@ -145,11 +75,11 @@ cumulative_proportion_of_goals(y_val, y_probas[:, 1], log_to_run=run)
 reliability_diagram(y_val, y_probas[:, 1], log_to_run=run)
 
 # Random Baseline generation and log to WandB
-y_probas_random = np.random.uniform(0, 1, len(y_val))
+# y_probas_random = np.random.uniform(0, 1, len(y_val))
 
-roc_curve_and_auc(y_val, y_probas_random, log_to_run=run)
-goal_rate_by_percentile(y_val, y_probas_random, log_to_run=run)
-cumulative_proportion_of_goals(y_val, y_probas_random, log_to_run=run)
+# roc_curve_and_auc(y_val, y_probas_random, log_to_run=run)
+# goal_rate_by_percentile(y_val, y_probas_random, log_to_run=run)
+# cumulative_proportion_of_goals(y_val, y_probas_random, log_to_run=run)
 
 # End run
 run.finish()
