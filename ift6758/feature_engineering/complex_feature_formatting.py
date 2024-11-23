@@ -97,6 +97,8 @@ def parse_game_events(game_data: dict) -> pd.DataFrame:
                 # Time difference from the last event
                 if game_seconds is not None and previous_event['game_seconds'] is not None:
                     time_from_last_event = abs(game_seconds - previous_event['game_seconds'])
+                    time_from_last_event = max(time_from_last_event, 1.0)  # Ensure time difference is at least 1 second
+
 
                 # Distance from the last event
                 if x_coord is not None and y_coord is not None and last_x_coord is not None and last_y_coord is not None:
