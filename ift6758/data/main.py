@@ -170,7 +170,7 @@ def main():
   #Instanciate fetcher
   base_url = "https://api-web.nhle.com/v1/gamecenter/{}/play-by-play"
   with concurrent.futures.ThreadPoolExecutor(max_workers=args.parallel or 5) as pool:
-    fetcher = NHLDataFetcher(base_url, save_dir = q_dir or None)
+    fetcher = NHLDataFetcher(base_url, save_dir = q_dir or None, pool = pool)
     #Execute fetcher
     if DOWNLOAD_GAMES_DATA:         #Fetch game-by-game if less than 1230 games required
       for season in q_year:

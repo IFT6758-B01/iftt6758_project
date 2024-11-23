@@ -10,6 +10,10 @@ from re import match
 from time import sleep
 from typing import Tuple
 from datetime import datetime
+import data.format_string
+
+# Instantiate class for color outputing methods
+StringColor = data.format_string.StringColor()
 
 def subprocess_popen_cmanager(args: list, timeout=30, verbose=False):
     """
@@ -23,20 +27,20 @@ def subprocess_popen_cmanager(args: list, timeout=30, verbose=False):
         p: subprocess.Popen, finished process of args
     """
     if verbose:
-        print(f'Opening process for command {args}')
-        print(f'Setting timeout to {timeout} seconds')
+        print(StringColor.debug('[DEBUG] ') + f'Opening process for command {args}')
+        print(StringColor.debug('[DEBUG] ') + f'Setting timeout to {timeout} seconds')
     try:
       p = subprocess.Popen(args)
       p.communicate(timeout=timeout)
     except KeyboardInterrupt:
-      print('CTRL-C catched, terminating program')
+      print(StringColor.info('[INFO] ') + 'CTRL-C catched, terminating program')
       p.terminate()
       sleep(5)
       #If SIGTERM does not do the trick, force raise TimeoutExpired
       if not p.poll():
           raise p.TimeoutExpired()
     except subprocess.TimeoutExpired:
-        print('Timeout for program execution reached, killing program')
+        print(StringColor.info('[INFO] ') + 'Timeout for program execution reached, killing program')
         p.kill()
     finally:
         return p
@@ -73,12 +77,10 @@ def _gather_and_check_paths(DATA_INPUT_PATH: str = None, DATA_OUTPUT_PATH: str =
     #Check that those paths exist
     ##DATA_INPUT_PATH & DATA_OUTPUT_PATH could not exist, create then
     if not DATA_INPUT_PATH.exists():
-            print(f'Could not find input directory {DATA_INPUT_PATH}')
-            print('Creating it..')
+            print(StringColor.warning('[WARNING] ') + f'Could not find input directory {DATA_INPUT_PATH}\n' + 'Creating it...')
             os.makedirs(DATA_INPUT_PATH)
     if not DATA_OUTPUT_PATH.exists():
-            print(f'Could not find output directory {DATA_OUTPUT_PATH}')
-            print('Creating it..')
+            print(StringColor.warning('[WARNING] ') + f'Could not find output directory {DATA_OUTPUT_PATH}\n' + 'Creating it...')
             os.makedirs(DATA_OUTPUT_PATH)
     if return_root_dir:
         return DATA_INPUT_PATH, DATA_OUTPUT_PATH, ROOT_DIR
@@ -108,12 +110,12 @@ def _assert_game_json(pathlib_gen):
             return True
         except StopIteration:
             if len(faulty_files) > 0:
-                print(f'Found {len(faulty_files)} faulty files in path')
+                print(StringColor.warning('[WARNING] ') + f'Found {len(faulty_files)} faulty files in path')
                 print(f'Such as {random.choice(faulty_files)}')
                 inpt = input('See full list ? [y/N]')
                 if inpt == 'y' or inpt == 'Y':
                     print(list(map(str,faulty_files)))
-                print('Make sure that DATA_INPUT_PATH contains only NHL game data')
+                print(StringColor.warning('[WARNING] ') + 'Make sure that DATA_INPUT_PATH contains only NHL game data')
                 os.sys.exit()
                 #return False, faulty_files
             else:
@@ -169,13 +171,13 @@ def main():
     if _assert_game_json(DATA_INPUT_PATH.rglob("**/*game*.json")):
         #Assert validity of CLI arguments `--year`, `--type`, `--games` and `--output`
         passed_args = _check_for_cli_args()
-        print("Attempting to download games")
+        print(StringColor.info('[INFO] ') + StringColor.bold("Attempting to download games"))
         #Get a timestamp now
         start_download_timestamp = datetime.now().strftime('%s')
         #Call CLI data acquisition NHLDataFetcher with passed_args if exists
         #Else download every regular season and playoffs games from season 2016-17 to 2023-24
         subprocess_popen_cmanager(passed_args or ['python', 'data/main.py', '-y', '2016-2023', '-t', '2,3'], timeout=1800)
-        print("Filtering json, formatting to pandas DataFrame and saving to csv")
+        print(StringColor.info('[INFO] ') + StringColor.bold("Filtering json, formatting to pandas DataFrame and saving to csv"))
         #Call data formatting tidy pipeline on JSON in DATA_INPUT_PATH and save them to csv of pandas DataFrames
         features.data_formatting.process_and_save_json_file(
           DATA_INPUT_PATH,
