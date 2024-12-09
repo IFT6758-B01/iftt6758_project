@@ -298,7 +298,7 @@ def augment_dataset(data_input_path: Union[pathlib.Path, str] = '../dataset/unpr
         for child in input_directory.iterdir():
             if re.match('2[0-9]{3}', child.name):
                 tmp_years.append(int(child.name))
-        tmp_years = [ int(subdir.name) for subdir in input_directory.iterdir() if re.match('201[6-9]', subdir.name) ]
+        #tmp_years = [ int(subdir.name) for subdir in input_directory.iterdir() if re.match('20[1-2][6-9]', subdir.name) ]
         years = tmp_years
     else:
         for year in years:
