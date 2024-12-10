@@ -1,3 +1,6 @@
+scikit-learn
+joblib
+wandb
 numpy
 pandas
 matplotlib

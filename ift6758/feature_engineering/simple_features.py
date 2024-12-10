@@ -63,7 +63,6 @@ def determine_goal_location(shots_data):
     for index, row in shots_data.iterrows():
         zone_code = row['zone_code']
         x_coord = row['x_coord']
-        
         # If we find an offensive or defensive zone shot, we determine the goal location
         if zone_code == 'O':  # Offensive zone
             return (90, 0) if x_coord > 0 else (-90, 0)
@@ -86,10 +85,8 @@ def calculate_new_metrics(period_data):
     """
     # Filter for SHOT and GOAL events
     df_shots_goals = period_data[period_data['event_type'].isin(['shot-on-goal', 'goal'])].copy()
-
     # Determine the goal location based on the shots in the period
     goal_location = determine_goal_location(period_data)
-
     # Calculate distance, angle, is_goal, and empty_net
     distances, angles = zip(*df_shots_goals.apply(
         lambda row: calculate_distance_and_angle(row['x_coord'], row['y_coord'], net_x=goal_location[0], net_y=goal_location[1]), axis=1
@@ -99,7 +96,6 @@ def calculate_new_metrics(period_data):
     df_shots_goals['is_goal'] = (df_shots_goals['event_type'] == 'goal').astype(int)
     df_shots_goals['net_x'] = goal_location[0]
     df_shots_goals['net_y'] = goal_location[1]
-
     df_shots_goals.drop(df_shots_goals.columns[df_shots_goals.columns.str.contains('unnamed',case = False)],axis = 1, inplace = True)
 
     return df_shots_goals
@@ -141,10 +137,8 @@ def calculate_distance_and_angle(x, y, net_x=90, net_y=0):
     """
     # Distance calculation
     distance = np.sqrt((x - net_x) ** 2 + (y - net_y) ** 2)
-
     # Angle calculation
     angle = np.arctan2(abs(y - net_y), abs(x - net_x)) * (180 / np.pi)
-
     # Left side of goal = positive, right side of goal = negative
     if (y < net_y and net_x > 0) or (y > net_y and net_x < 0):
         angle = -angle
@@ -170,18 +164,13 @@ def augment_data(input_path, output_path):
     if output_file.exists():
         print(f'File {output_file} already exists. Skipping')
         df_aggregate = pd.read_csv(output_file)
-        
     else:
         print(f'Processing {input_path}..')
-
         all_data = load_season_data(input_path)
-
         # Segment the data by team, game, and period
         segmented_data = segment_shot_data(all_data)
-
         # Aggregate the data and calculate new metrics
         df_aggregate = aggregate_data(segmented_data)
-
         df_aggregate.to_csv(output_file, index=False)
         print(f"Augmented data saved to {output_file}")
 
@@ -206,28 +195,6 @@ def augment_dataset():
     df_aggregate = pd.concat(all_data, ignore_index=True)
     output_file_path = pathlib.Path(output_directory)
     output_file = output_file_path / "augmented_data.csv"
-    df_aggregate.to_csv(output_file, index=False)
-    print(f"Combined augmented data saved to {output_file}")
-
-    return df_aggregate
-
-def augment_test_dataset():
-    # Paths for input and output directories
-    years = [2020]
-    df_aggregate = pd.DataFrame()
-    all_data = []
-    input_directory = "../dataset/processed"
-    output_directory = "../dataset/simple_engineered"
-
-    for year in years:
-        input_path = os.path.join(input_directory, str(year))
-        output_path = os.path.join(output_directory, str(year))
-        # Process the data
-        all_data.append(augment_data(input_path, output_path))
-
-    df_aggregate = pd.concat(all_data, ignore_index=True)
-    output_file_path = pathlib.Path(output_directory)
-    output_file = output_file_path / "augmented_test_data.csv"
     df_aggregate.to_csv(output_file, index=False)
     print(f"Combined augmented data saved to {output_file}")
 

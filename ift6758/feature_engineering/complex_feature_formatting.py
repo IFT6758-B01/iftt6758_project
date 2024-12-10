@@ -5,6 +5,7 @@ import re
 import pandas as pd
 import numpy as np
 import simple_features as sf
+from typing import Union, List
 
 
 def calculate_game_seconds(period_time, period_number):
@@ -52,6 +53,8 @@ def parse_game_events(game_data: dict) -> pd.DataFrame:
     """
     events = game_data.get('plays', [])
     game_id = game_data.get('id', '')
+    if events == []:
+        raise Exception(f'No plays data has been found in game {game_id}')
 
     # List to store parsed events
     event_data = []
@@ -242,12 +245,17 @@ def process_and_save_json_file(DATA_INPUT_PATH : pathlib.Path, DATA_OUTPUT_PATH 
             print(f'File {output_file} already exists. Skipping')
             continue
         with open(game_json_file, 'r') as open_file:
-            print(f'Processing {game_json_file}..')
-            game_dict = json.load(open_file)
-            df_game = parse_game_events(game_dict)
-            df_game = augment_data_complex(df_game)
-            df_game.to_csv(output_file)
-            print(f'Saved csv of dataframe to {output_file}')
+            try:
+                print(f'Processing {game_json_file}..')
+                game_dict = json.load(open_file)
+                df_game = parse_game_events(game_dict)
+                df_game = augment_data_complex(df_game)
+                df_game.to_csv(output_file)
+                print(f'Saved csv of dataframe to {output_file}')
+            except Exception as e:
+                print('[WARNING] An exception occured')
+                print(e)
+                continue
 
 
 def load_season_data(data_folder):
@@ -274,20 +282,37 @@ def load_season_data(data_folder):
 
 
 # Augment and combine all the data from 2016 - 2019
-def augment_dataset():
-    input_directory = "../dataset/unprocessed/"
-    output_directory = "../dataset/complex_engineered/"
-    
-    output_path = pathlib.Path(output_directory)
-    output_path.mkdir(parents=True, exist_ok=True)
+def augment_dataset(data_input_path: Union[pathlib.Path, str] = '../dataset/unprocessed', data_output_path: Union[pathlib.Path, str] = '../dataset/complex_engineered', years: List[int] = None):
+    input_directory = pathlib.Path(data_input_path or os.getenv("DATA_INPUT_PATH", None))
+    output_directory = pathlib.Path(data_output_path or os.getenv("DATA_OUTPUT_PATH", None))
 
-    years = [2016, 2017, 2018, 2019]
+    if not input_directory.is_dir():
+        raise FileNotFoundError(f'data_input_path: {data_input_path} is not a directory')
+    if not output_directory.is_dir():
+        output_directory.mkdir(parents=True)
+
+    output_path = pathlib.Path(output_directory)
+    #years = [2016, 2017, 2018, 2019]
+    if years is None:
+        tmp_years = []
+        for child in input_directory.iterdir():
+            if re.match('2[0-9]{3}', child.name):
+                tmp_years.append(int(child.name))
+        #tmp_years = [ int(subdir.name) for subdir in input_directory.iterdir() if re.match('20[1-2][6-9]', subdir.name) ]
+        years = tmp_years
+    else:
+        for year in years:
+            year_directory = (input_directory / str(year))
+            if not year_directory.is_dir():
+                raise FileNotFoundError(f'Path {year_directory} does not exist')
+
     df_aggregate = pd.DataFrame()
     all_data = []
 
     for year in years:
-        input_path = os.path.join(input_directory, str(year))
-        input_path = pathlib.Path(input_path)
+        #input_path = os.path.join(input_directory, str(year))
+        #input_path = pathlib.Path(input_path)
+        input_path = (input_directory / str(year))
         # Process the data
         process_and_save_json_file(input_path, output_path)
         all_data.append(load_season_data(output_path / str(year)))
@@ -298,33 +323,3 @@ def augment_dataset():
     print(f"Combined augmented data saved to {output_file}")
 
     return df_aggregate
-
-def augment_test_dataset():
-    input_directory = "../dataset/unprocessed/"
-    output_directory = "../dataset/complex_engineered/"
-    
-    output_path = pathlib.Path(output_directory)
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    years = [2020]
-    df_aggregate = pd.DataFrame()
-    all_data = []
-
-    for year in years:
-        input_path = os.path.join(input_directory, str(year))
-        input_path = pathlib.Path(input_path)
-        # Process the data
-        process_and_save_json_file(input_path, output_path)
-        all_data.append(load_season_data(output_path / str(year)))
-
-    df_aggregate = pd.concat(all_data, ignore_index=True)
-    output_file = output_path / "augmented_test_data.csv"
-    df_aggregate.to_csv(output_file, index=False)
-    print(f"Combined augmented data saved to {output_file}")
-
-    return df_aggregate
-
-
-
-
-

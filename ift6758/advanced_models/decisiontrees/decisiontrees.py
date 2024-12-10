@@ -42,7 +42,6 @@ def goal_rate_by_percentile(y_val, y_prob, log_to_run=None, commit=True):
     goal_rate_by_percentile = df_val.groupby('percentile')['y_val'].mean()
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    breakpoint()
     ax.plot(goal_rate_by_percentile.index, goal_rate_by_percentile, marker='o')
     ax.set_title("Goal Rate by Percentile")
     ax.set_xlabel("Shot Probability Model Percentile")
@@ -123,7 +122,7 @@ def detect_nan_values(df):
         print("\nSpecific locations of NaN values:")
         nan_locations = np.where(pd.isna(df))
         for row, col in zip(nan_locations[0], nan_locations[1]):
-            #print(f"NaN at Row: {row}, Column: {df.columns[col]}")
+            print(f"NaN at Row: {row}, Column: {df.columns[col]}")
     else:
         print("No NaN values detected in the dataset.")
 
