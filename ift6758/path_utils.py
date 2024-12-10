@@ -8,13 +8,29 @@ from typing import Union
 StringColor = format_string.StringColor()
 
 
-def get_current_file_path():
+def get_current_file_path(return_dir_path=False):
+    """
+    Get run file path from builtin `__file__` and returns it.
+    Additionally returns file's directory path if param `return_dir_path` is set to True.
+    If `__file__` is not defined (ex: interaction python shell), resorts to returning directory path from `pwd`
+
+    Parameters:
+      return_dir_path (bool, default=False): Additionally returns directory path, if file path exists
+
+    Returns:
+      current_file_path, [current_dir_path] (pathlib.Path): pathlib.Path objects of file and directory paths
+    """
     try:
-        return __file__
-    except NameError:
-        StringColor.warning('__file__ not defined, returning output from `pwd`')
-        current_file_path = pwd
+        current_file_path = pathlib.Path(__file__)
+        if return_dir_path and current_file_path.is_file():
+            current_dir_path = current_file_path.parent
+            return current_file_path, current_dir_path
         return current_file_path
+    except NameError:
+        StringColor.warning('__file__ not defined, returning directory path from `pwd` only')
+        current_dir_path = pwd
+        current_dir_path = pathlib.Path(current_dir_path)
+        return current_dir_path
 
 
 def _is_git_folder(path: pathlib.Path):

@@ -11,12 +11,13 @@ from sklearn.calibration import CalibrationDisplay
 import matplotlib.pyplot as plt
 
 os.sys.path.append(str(pathlib.Path(__file__).absolute().resolve().parents[1]))
-from path_utils import get_current_file_path, get_git_root_path
+from path_utils import get_git_root_path
 
 
 # Load the dataset
-current_path = get_current_file_path()
-base_root_path = get_git_root_path(current_path)
+current_file_path = pathlib.Path(__file__)
+current_dir_path = current_file_path.parent
+base_root_path = get_git_root_path(current_file_path)
 if base_root_path is None:
     raise Exception('Could not locate root git directory for processing dataset')
 df = pd.read_csv((base_root_path / 'ift6758' / 'dataset' / 'complex_engineered' / 'augmented_data.csv'))
@@ -61,12 +62,13 @@ for model_name, (model, features_subset) in {
     y_prob = model.predict_proba(X_val[features_subset])[:, 1]
     fpr, tpr, _ = roc_curve(y_val, y_prob)
     roc_auc = auc(fpr, tpr)
-    
+
     # Store results
     results[model_name] = {"roc_auc": roc_auc, "y_prob": y_prob}
 
-    joblib.dump(model, f"{model_name.replace(' ', '_')}_logistic_model.pkl")
-    print(f"Saved model: {model_name} to {model_name.replace(' ', '_')}_logistic_model.pkl")
+    model_save_path = (current_dir_path / f"{model_name.replace(' ', '_')}_logistic_model.pkl")
+    joblib.dump(model, model_save_path)
+    print(f"Saved model: {model_name} to {str(model_save_path)}")
 
     # Log ROC Curve
     plt.figure()
@@ -105,7 +107,7 @@ for model_name, (model, features_subset) in {
     plt.figure(figsize=(10, 6))
     plt.plot(percentile_range, cumulative_goal_percentage, marker='o', label="Cumulative Goals")
     plt.title(f"Cumulative Proportion of Goals: {model_name}")
-    
+
     plt.xlabel("Shot Probability Model Percentile")
     plt.ylabel("Cumulative Proportion of Goals")
     plt.legend()
@@ -136,5 +138,3 @@ for model_name, result in results.items():
 wandb.log({"Model Comparison Table": metrics_table})
 
 wandb.finish()
-
-
