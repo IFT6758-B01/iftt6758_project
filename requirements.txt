@@ -1,8 +1,5 @@
-scikit-learn
-joblib
-wandb
-numpy
-pandas
+numpy==2.0.2
+pandas==2.2.2
 matplotlib
 seaborn
 requests
@@ -14,3 +11,8 @@ ipywidgets
 ipykernel
 jupyterlab>=3.0.0
 setuptools
+gunicorn
+flask
+scikit-learn==1.5.2
+joblib
+wandb

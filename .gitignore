@@ -138,5 +138,5 @@ dmypy.json
 # dataset
 dataset/
 
-# WandB logs
+# WandB
 wandb/
