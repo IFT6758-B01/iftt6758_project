@@ -11,11 +11,7 @@ os.sys.path.append((pathlib.Path(__file__) / '..' ).resolve().absolute())
 #from serving import app
 
 
-"""
-General template for your streamlit app.
-Feel free to experiment with layout and adding functionality!
-Just make sure that the required functionality is included as well
-"""
+
 
 st.title("HOCKEY VIZ TOOL")
 
@@ -24,26 +20,27 @@ URL = 'http://0.0.0.0:8080'
 
 st.sidebar.header("Select model")
 model_selection_form = st.sidebar.form('Model')
-model_selection_form.write('Default entity: IFT6758_2024-B01')
-workspace = model_selection_form.text_input('Workspace:', placeholder='ms2-logistic-regression')
-model = model_selection_form.text_input('Model:')
-model_version = model_selection_form.text_input('Version:')
+#model_selection_form.write('Default entity: IFT6758_2024-B01')
+#workspace = model_selection_form.text_input('Workspace:', placeholder='ms2-logistic-regression')
+workspace = model_selection_form.text_input('Workspace:', value='IFT6758_2024-B01')
+model = model_selection_form.text_input('Model:', value='Distance_Angle')
+model_version = model_selection_form.text_input('Version:', value='V0')
 model_submit = model_selection_form.form_submit_button('Submit')
 if model_submit and (model == '' or model_version == '' or workspace == ''):
     model_selection_form.warning('Empty field Workspace/Model/Version')
 if model_submit and (model != '' and model_version != '' and workspace != ''):
     print(type(model))
     print(type(model_version))
-    st.write('Fetching model', model, 'with version', model_version, 'in', workspace)
+    st.sidebar.write('Fetching model', model, 'with version', model_version, 'in', workspace)
     model_selection_json = {
         'workspace': workspace,
         'model': model,
         'version': model_version
     }
     response = requests.post(f"{URL}/download_registry_model", json = model_selection_json)
-    st.write(response.status_code, response.reason)
-    if response.status_code != 200:
-        st.write(response.content)
+    st.sidebar.write(response.status_code, response.reason)
+    if response.status_code != 200:      
+        st.sidebar.write(response.content)
 #with st.sidebar:
 #    st.header("Select model")
 #    with st.form('Model'):
