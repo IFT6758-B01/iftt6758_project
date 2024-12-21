@@ -19,20 +19,28 @@ Just make sure that the required functionality is included as well
 
 st.title("HOCKEY VIZ TOOL")
 
+URL = 'http://0.0.0.0:8080'
+
 
 st.sidebar.header("Select model")
 model_selection_form = st.sidebar.form('Model')
+model_selection_form.write('Default entity: IFT6758_2024-B01')
+workspace = model_selection_form.text_input('Workspace:', placeholder='ms2-logistic-regression')
 model = model_selection_form.text_input('Model:')
 model_version = model_selection_form.text_input('Version:')
 model_submit = model_selection_form.form_submit_button('Submit')
-if model_submit:
-    st.write('Fetching model', model, 'with version', model_version)
+if model_submit and (model == '' or model_version == '' or workspace == ''):
+    model_selection_form.warning('Empty field Workspace/Model/Version')
+if model_submit and (model != '' and model_version != '' and workspace != ''):
+    print(type(model))
+    print(type(model_version))
+    st.write('Fetching model', model, 'with version', model_version, 'in', workspace)
     model_selection_json = {
         'workspace': workspace,
         'model': model,
-        'version': version
+        'version': model_version
     }
-    response = requests.post(URL, json = model_selection_json)
+    response = requests.post(f"{URL}/download_registry_model", json = model_selection_json)
     st.write(response.status_code, response.reason)
     if response.status_code != 200:
         st.write(response.content)
@@ -59,7 +67,7 @@ game_id_selectbox = game_id_container.selectbox('Game ID', list_downloadable_gam
 game_id_submit = game_id_container.button('Ping game')
 if game_id_submit:
     request = { 'game_id': game_id_selectbox }
-    response = requests.post('http://0.0.0.0:8080/process_game', json=request)
+    response = requests.post(URL+'/process_game', json=request)
 #with st.container():
 #    game_id = st.text('Game ID')
 #    list_available_games = pd.read_csv(pathlib.Path('./ift6758/dataset/complex_engineered/augmented_data.csv'))['game_id'].unique()
@@ -76,15 +84,28 @@ if not game_id_submit:
     st.write('Waiting for game input')
 else:
     response_json = response.json()
+    if response_json == '':
+        predictions_container.error('Got empty response, is game valid ?')
     #st.write(response_json.get('message'))
-    df = pd.DataFrame(
-      data=[ (game_event.get('predicted_probabilities'), game_event.get('team_id')) for game_event in response_json ],
-      columns=['goal_proba', 'team_id']
-    )
-    home_game_xG = df.groupby(by='team_id').sum()
-    home_game_xG
-    #away_game_xG·=·
-    
+    if not str(response.status_code).startswith('2'):
+        with open('./serving/flask.log', 'r') as logs:
+            tail_logs = ''
+            for line in (logs.readlines() [-20:]):
+                tail_logs += line+'\n'
+            st.error('An error occured while generating predictions, please refer to logs\n\n')
+            st.error(tail_logs)
+    else:
+        if "xg_df" not in st.session_state:
+            df = pd.DataFrame(
+              data=[ (game_event.get('predicted_probabilities'), game_event.get('team_id')) for game_event in response_json ],
+              columns=['goal_proba', 'team_id']
+            )
+            home_game_xG = df.groupby(by='team_id').sum()
+            home_game_xG
+            st.session_state.xg_df = home_game_xG
+            #away_game_xG·=·
+        else:
+            st.session_state.xg_df
 #with st.container():
     # TODO: Add Game info and predictions
     #response_json = json.dumps(response)

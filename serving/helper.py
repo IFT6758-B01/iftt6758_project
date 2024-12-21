@@ -82,6 +82,8 @@ def parse_game_events(game_data: dict) -> pd.DataFrame:
     Parses the JSON response of a game to extract 'shot-on-goal' and 'goal' events and converts them into a Pandas DataFrame.
     """
     events = game_data.get('plays', [])
+    if events == []:
+        raise Exception('No play-by-play data has been found')
     game_id = game_data.get('id', '')
 
     # List to store parsed events

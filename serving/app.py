@@ -148,9 +148,11 @@ def download_registry_model():
         else:
             logger.info(f"Downloading model {model_name} version {version} from WandB registry.")
             wandb.init(project=workspace, entity="IFT6758_2024-B01", mode="online")
+            logger.info(f"Initialized a run in project {workspace}")
             model_artifact = wandb.use_artifact(f"{model_name}:{version}", type="model")
-            model_artifact.download(root=model_dir)
-            logger.debug(f'Downloaded model into {model_dir}/{model_name}')
+            logger.info(f"Downloading artifact {model_artifact.name}")
+            model_download_path = model_artifact.download(root=model_dir)
+            logger.info(f'Downloaded {model_artifact.name} into {model_download_path}')
             wandb.finish()
 
         # Load the downloaded model
@@ -229,6 +231,13 @@ def process_game():
         augmented_events = augment_data(unprocessed_events)
 
         # Predict probabilities for augmented events
+        if current_model_name == 'Distance_Angle':
+            input_features = ["distance_from_net", "angle_from_net"]
+        elif current_model_name == 'Distance_Only':
+            input_features = ["distance_from_net"]
+        elif current_model_name == 'Angle_Only':
+            input_features = ["angle_from_net"]
+
         augmented_events["predicted_probabilities"] = current_model.predict_proba(
             augmented_events[["distance_from_net", "angle_from_net"]]
         )[:, 1]
@@ -243,3 +252,7 @@ def process_game():
     except Exception as e:
         logger.error(f"Failed to process game: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
