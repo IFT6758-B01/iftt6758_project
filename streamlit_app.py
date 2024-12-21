@@ -97,10 +97,42 @@ else:
               data=[ (game_event.get('predicted_probabilities'), game_event.get('team_id')) for game_event in response_json ],
               columns=['goal_proba', 'team_id']
             )
-            home_game_xG = df.groupby(by='team_id').sum()
-            home_game_xG
+            #response_json
+            #df
+
+            home_game_xG = df.groupby(by='team_id').sum().reset_index()
+
+            # get all team names list
+            url = "https://api.nhle.com/stats/rest/en/team"
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()            
+            df_team = pd.json_normalize(data['data'])
+           
+
+            # add one column 'full Name'  
+            home_game_xG['name'] = home_game_xG['team_id'].map(df_team.set_index('id')['fullName'])
+            home_game_xG 
+
+            # print team name
+            team_1 = home_game_xG.at[0, 'name']
+            team_2 = home_game_xG.at[1, 'name']
+            #st.write(f"Game: {game_id_selectbox }  {team_1} vs {team_2}")
+            team_title = f"<p style='font-family:sans-serif; color:Black; font-size: 20px;'>Game: {game_id_selectbox }   {team_1} vs {team_2}</p>"
+            st.markdown(team_title, unsafe_allow_html=True)
+
+            #home_game_xG
             st.session_state.xg_df = home_game_xG
             #away_game_xG·=·
+
+
+
+
+
+          
+            
+
+
         else:
             st.session_state.xg_df
 #with st.container():
