@@ -97,8 +97,9 @@ else:
               data=[ (game_event.get('predicted_probabilities'), game_event.get('team_id')) for game_event in response_json ],
               columns=['goal_proba', 'team_id']
             )
-            #response_json
-            #df
+            df_all= pd.json_normalize(response_json)
+            
+            
 
             home_game_xG = df.groupby(by='team_id').sum().reset_index()
 
@@ -112,19 +113,50 @@ else:
 
             # add one column 'full Name'  
             home_game_xG['name'] = home_game_xG['team_id'].map(df_team.set_index('id')['fullName'])
-            home_game_xG 
+            #home_game_xG 
 
             # print team name
             team_1 = home_game_xG.at[0, 'name']
             team_2 = home_game_xG.at[1, 'name']
             #st.write(f"Game: {game_id_selectbox }  {team_1} vs {team_2}")
-            team_title = f"<p style='font-family:sans-serif; color:Black; font-size: 20px;'>Game: {game_id_selectbox }   {team_1} vs {team_2}</p>"
-            st.markdown(team_title, unsafe_allow_html=True)
+            #team_title = f"<p style='font-family:sans-serif; color:Black; font-size: 20px;'>Game: {game_id_selectbox }   {team_1} vs {team_2}</p>"
+            #st.markdown(team_title, unsafe_allow_html=True)
+            st.write(f"Game: {game_id_selectbox}")
+            st.header(f"{team_1} VS {team_2}")
 
             #home_game_xG
             st.session_state.xg_df = home_game_xG
             #away_game_xG·=·
 
+            # Get period and left time from last row as current period          
+            last_period = df_all.iloc[-1]['period'] # -1 for last row
+            last_time_remaining = df_all.iloc[-1]['time_remaining']
+            st.write(f"Period: {last_period}, Time: {last_time_remaining} - left")
+           
+
+            #print Score ( predict Score)      
+            #get socre info 
+            url = f"https://api-web.nhle.com/v1/wsc/game-story/{game_id_selectbox}"             
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json() 
+            score_1 = round(data['awayTeam']['score'])
+            score_2 = round(data['homeTeam']['score'])      
+            predict_score_1 = round(home_game_xG.at[0, 'goal_proba'],1)
+            predict_score_2 = round(home_game_xG.at[1, 'goal_proba'],1)
+            diff_1= round(predict_score_1-score_1,1)
+            diff_2= round(predict_score_2-score_2,1)
+            col1, col2= st.columns(2)
+            with col1:            
+                st.metric(label=f"{team_1} Current(Predict)", value=f"{score_1}({predict_score_1})", delta=f"{diff_1}")
+            with col2:      
+                st.metric(label=f"{team_2}", value=f"{score_2}({predict_score_2})", delta=f"{diff_2}")
+            
+            # show data used for predictions
+            st.header(f"Data used for predictions")
+            df_all
+
+ 
 
 
 
