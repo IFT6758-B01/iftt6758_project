@@ -76,107 +76,113 @@ with st.container():
     else:
         response_json = response.json()
         if response_json == '':
-            predictions_container.error('Got empty response, is game valid ?')
-        #st.write(response_json.get('message'))
-        if not str(response.status_code).startswith('2'):
-            with open('./serving/flask.log', 'r') as logs:
-                tail_logs = ''
-                for line in (logs.readlines() [-20:]):
-                    tail_logs += line+'\n'
-                st.error('An error occured while generating predictions, please refer to logs\n\n')
-                st.error(tail_logs)
-        else:
-            if "xg_df" not in st.session_state:
-                df = pd.DataFrame(
-                data=[ (game_event.get('predicted_probabilities'), game_event.get('team_id')) for game_event in response_json ],
-                columns=['goal_proba', 'team_id']
-                )
-                df_all= pd.json_normalize(response_json) 
+            predictions_container.error('Got empty response, is game valid ?')      
+        # Handle response based on content type
+        if isinstance(response_json, dict):
+            # If it's a message, check for "No new events" case
+            message = response_json.get("message", "")
+            st.write(f"No new events to process")  
+            # if message == "No new events to process.":
+            #     st.write(f"No new events to process")                 
+            # else:
+            #     st.write(f"Unexpected message received: {message}")                    
+        else:            
+            if not str(response.status_code).startswith('2'):
+                with open('./serving/flask.log', 'r') as logs:
+                    tail_logs = ''
+                    for line in (logs.readlines() [-20:]):
+                        tail_logs += line+'\n'
+                    st.error('An error occured while generating predictions, please refer to logs\n\n')
+                    st.error(tail_logs)
+            else:
+                if "xg_df" not in st.session_state:
+                    #st.write(response_json)
+                    df = pd.DataFrame(
+                    data=[ (game_event.get('predicted_probabilities'), game_event.get('team_id')) for game_event in response_json ],
+                    columns=['goal_proba', 'team_id']
+                    )
+                    df_all= pd.json_normalize(response_json) 
 
-                home_game_xG = df.groupby(by='team_id').sum().reset_index()               
+                    home_game_xG = df.groupby(by='team_id').sum().reset_index()  
 
-                # get all team names list  
-                try:
-                    response = requests.get(URL_TEAMNAME )
-                    response.raise_for_status()
-                    data = response.json()            
-                    df_team = pd.json_normalize(data['data'])
-                except requests.Timeout:
-                    print(f"Request to {URL_TEAMNAME } timed out.") 
-                except ConnectionError:
-                    print(f"Error connecting to {URL_TEAMNAME }. Check your internet connection.")  
-                except requests.HTTPError as http_err:
-                    print(f"HTTP error occurred: {http_err}")
-                    if response.status_code == 404:
-                        print(f"Resource not found at {URL_TEAMNAME }") #More specific error message
-                except requests.RequestException as req_err:  # Catch other request exceptions
-                    print(f"A request error occurred: {req_err}")                  
-                except ValueError as json_err: #Catch json decoding errors
-                    print(f"Decoding JSON failed: {json_err}")
-                    print(f"Response text: {response.text}") #Print response text to debug                 
-                except Exception as e: #Catch other errors
-                    print(f"An unexpected error occurred: {e}")
+                    # get all team names list  
+                    try:
+                        response = requests.get(URL_TEAMNAME )
+                        response.raise_for_status()
+                        data = response.json()            
+                        df_team = pd.json_normalize(data['data'])
+                    except requests.Timeout:
+                        st.error(f"Request to {URL_TEAMNAME } timed out.") 
+                    except ConnectionError:
+                        st.error(f"Error connecting to {URL_TEAMNAME }. Check your internet connection.")  
+                    except requests.HTTPError as http_err:
+                        st.error(f"HTTP error occurred: {http_err}")
+                        if response.status_code == 404:
+                            st.error(f"Resource not found at {URL_TEAMNAME }") #More specific error message
+                    except requests.RequestException as req_err:  # Catch other request exceptions
+                        st.error(f"A request error occurred: {req_err}")                  
+                    except ValueError as json_err: #Catch json decoding errors
+                        st.error(f"Decoding JSON failed: {json_err}")
+                        st.error(f"Response text: {response.text}") #Print response text to debug                 
+                    except Exception as e: #Catch other errors
+                        st.error(f"An unexpected error occurred: {e}")
 
-                # add one column 'name'  
-                home_game_xG['name'] = home_game_xG['team_id'].map(df_team.set_index('id')['fullName'])
-                #home_game_xG 
+                    # add one column 'name'  
+                    home_game_xG['name'] = home_game_xG['team_id'].map(df_team.set_index('id')['fullName'])
+                    
 
-                # print team name
-                team_1 = home_game_xG.at[0, 'name']
-                team_2 = home_game_xG.at[1, 'name']                
-                st.write(f"Game: {game_id_selectbox}")
-                st.header(f"{team_1} VS {team_2}")
+                    # print team name
+                    team_1 = home_game_xG.at[0, 'name']
+                    team_2 = home_game_xG.at[1, 'name']                
+                    st.write(f"Game: {game_id_selectbox}")
+                    st.header(f"{team_1} VS {team_2}")
+                    
+                    st.session_state.xg_df = home_game_xG
+                    #away_game_xG·=·
 
-                
-                st.session_state.xg_df = home_game_xG
-                #away_game_xG·=·
+                    # Get period and left time from last row as current period          
+                    last_period = df_all.iloc[-1]['period'] # -1 for last row
+                    last_time_remaining = df_all.iloc[-1]['time_remaining']
+                    st.write(f"Period: {last_period}, Time: {last_time_remaining} - left")            
 
-                # Get period and left time from last row as current period          
-                last_period = df_all.iloc[-1]['period'] # -1 for last row
-                last_time_remaining = df_all.iloc[-1]['time_remaining']
-                st.write(f"Period: {last_period}, Time: {last_time_remaining} - left")            
-
-                #print Score ( predict Score)      
-                #get socre info 
-                url_gamestory = f"{URL_GAMESTORY}{game_id_selectbox}"     
-                try:     
-                    response = requests.get(url_gamestory)
-                    response.raise_for_status()
-                    data = response.json() 
-                    score_1 = round(data['awayTeam']['score'])
-                    score_2 = round(data['homeTeam']['score'])      
-                    predict_score_1 = round(home_game_xG.at[0, 'goal_proba'],1)
-                    predict_score_2 = round(home_game_xG.at[1, 'goal_proba'],1)
-                    diff_1= round(predict_score_1-score_1,1)
-                    diff_2= round(predict_score_2-score_2,1)
-                    col1, col2= st.columns(2)
-                    with col1:            
-                        st.metric(label=f"{team_1} Current(Predict)", value=f"{score_1}({predict_score_1})", delta=f"{diff_1}")
-                    with col2:      
-                        st.metric(label=f"{team_2}", value=f"{score_2}({predict_score_2})", delta=f"{diff_2}")
-                except requests.Timeout:
-                    print(f"Request to { url_gamestory } timed out.") 
-                except ConnectionError:
-                    print(f"Error connecting to { url_gamestory  }. Check your internet connection.")  
-                except requests.HTTPError as http_err:
-                    print(f"HTTP error occurred: {http_err}")
-                    if response.status_code == 404:
-                        print(f"Resource not found at { url_gamestory }") #More specific error message
-                except requests.RequestException as req_err:  # Catch other request exceptions
-                    print(f"A request error occurred: {req_err}")                  
-                except ValueError as json_err: #Catch json decoding errors
-                    print(f"Decoding JSON failed: {json_err}")
-                    print(f"Response text: {response.text}") #Print response text to debug                 
-                except Exception as e: #Catch other errors
-                    print(f"An unexpected error occurred: {e}")
-                
-                # show data used for predictions
-                with st.expander('Data'): 
-                    # show data used for predictions
+                    #print Score ( predict Score)      
+                    #get socre info 
+                    url_gamestory = f"{URL_GAMESTORY}{game_id_selectbox}"     
+                    try:     
+                        response = requests.get(url_gamestory)
+                        response.raise_for_status()
+                        data = response.json() 
+                        score_1 = round(data['awayTeam']['score'])
+                        score_2 = round(data['homeTeam']['score'])      
+                        predict_score_1 = round(home_game_xG.at[0, 'goal_proba'],1)
+                        predict_score_2 = round(home_game_xG.at[1, 'goal_proba'],1)
+                        diff_1= round(predict_score_1-score_1,1)
+                        diff_2= round(predict_score_2-score_2,1)
+                        col1, col2= st.columns(2)
+                        with col1:            
+                            st.metric(label=f"{team_1} Current(Predict)", value=f"{score_1}({predict_score_1})", delta=f"{diff_1}")
+                        with col2:      
+                            st.metric(label=f"{team_2}", value=f"{score_2}({predict_score_2})", delta=f"{diff_2}")
+                    except requests.Timeout:
+                        st.error(f"Request to { url_gamestory } timed out.") 
+                    except ConnectionError:
+                        st.error(f"Error connecting to { url_gamestory  }. Check your internet connection.")  
+                    except requests.HTTPError as http_err:
+                        st.error(f"HTTP error occurred: {http_err}")
+                        if response.status_code == 404:
+                            st.error(f"Resource not found at { url_gamestory }") #More specific error message
+                    except requests.RequestException as req_err:  # Catch other request exceptions
+                        st.error(f"A request error occurred: {req_err}")                  
+                    except ValueError as json_err: #Catch json decoding errors
+                        st.error(f"Decoding JSON failed: {json_err}")
+                        st.error(f"Response text: {response.text}") #Print response text to debug                 
+                    except Exception as e: #Catch other errors
+                        st.error(f"An unexpected error occurred: {e}")
+                    
+                    # show data used for predictions                    
                     st.header(f"Data used for predictions")
                     df_all
-            else:
-                st.session_state.xg_df
-
-
-      
+                    
+                else:                    
+                    st.session_state.xg_df
+    
